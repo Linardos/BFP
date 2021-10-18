@@ -1,0 +1,12 @@
+*.pkl
+cifar-10*
+experiments/*
+.*
+!/.gitignore
+*__pycache__*
+*.pyc
+envs/
+*unit_test*
+*minimal_reproducible*
+*log*
+*torchio/

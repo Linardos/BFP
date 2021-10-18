@@ -1,0 +1,4 @@
+name: flower_env
+channels:
+  - defaults
+prefix: /home/linardos/anaconda3/envs/flower_env
