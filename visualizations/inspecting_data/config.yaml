@@ -1,0 +1,64 @@
+hyperparameters:
+    num_epochs : 100
+    save_every : 5
+    training_batch_size : 10  # 128
+    validation_batch_size : 10  
+    use_patches: False
+    patch_size : [32, 32, 1]  # 32 32 1. 
+    samples_per_volume : 5  # 15 (faster and more background)
+    max_queue_length : 300  # decrease if RAM is getting full
+#     criterion : torch.nn.NLLLoss #
+    criterion : torch.nn.MSELoss #BCELoss gives an error for breast # https://stackoverflow.com/questions/60022388/pytorch-runtimeerror-reduce-failed-to-synchronize-cudaerrorassert-device-sid
+    optimizer : torch.optim.Adam
+    lr : 0.01
+model:
+    # The model name used here will generate a new experiment in the ~/mnm/experiments
+    name: 'Breast_Init' # Note that if you try to create a duplicate file within a frame of 5 minutes it will overwrite the initial one
+    arch:
+        function: models.nets.SqueezeNetClassifier
+        args: #keyword arguments for function
+            pretrained: True
+            in_ch: 1
+            out_ch: 1
+            early_layers_learning_rate: 0.01 #10^-5, if set to 0 early layers will be frozen 
+            seed: 42 # Particularly important for federated. Models will make no sense if we aggregate from different initializations
+    pretrained: # if we have our own weights
+        isTrue: False
+        weights: workenv/mnm/experiments/UResNet_segmentation_weights/models/init-seg/models/best_model.pth
+    continue: True # you have to have continue True and name set to an existing folder you want to continue training on
+paths:
+    DDSM:
+        raw: Datasets/CBIS-DDSM-NIFTI
+        processed:  Datasets/CBIS-DDSM-NIFTI/Processed
+        csv_report_parent: workenv/breast/src/data_handling
+    experiments: workenv/breast/experiments
+    misc: workenv/breast/experiments/misc
+data:
+#     pathologies: ['NOR', 'DCM','HCM', 'RV'] # ['DCM', 'HCM', 'NOR', 'RV']
+#     stratified_subset: 0 # If you want to use the entire data this should be set to False or 0
+
+    pathologies: ['BENIGN','MALIGN'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
+    concatenateEDES: False # if False and in_ch==3, Fragmented-Heart scheme will be applied
+    crossvalidation: True
+    centres:
+        # - "Vall d'Hebron" 
+        # - "Sagrada Familia"
+        # - "ACDC"
+        # - "SantPau" # HCM vs NOR, TypeError: must be real number, not str. Federated and Centralized
+        # - "McGill"
+        # - "UKE" # Only DCM
+        # - "Dexeus"
+#     augmentations:
+#         - torchio.transforms.RandomFlip(axes=('LR', 'SI'))
+#         - torchio.transforms.RandomAffine(translation=0)
+#         - torchio.transforms.RandomElasticDeformation()
+#         - torchio.transforms.RandomMotion()
+#         - torchio.transforms.RandomGhosting()
+#         - torchio.transforms.RandomSpike()
+#         - torchio.transforms.RandomBiasField()
+#         - torchio.transforms.RandomBlur()
+#         - torchio.transforms.RandomNoise()
+#         - torchio.transforms.RandomSwap(patch_size=(16, 16, 1))
+#         - torchio.transforms.RandomGamma()
+federated:
+    isTrue: False 
