@@ -28,12 +28,15 @@ model:
         isTrue: False
         weights: workenv/mnm/experiments/UResNet_segmentation_weights/models/init-seg/models/best_model.pth
     continue: True # you have to have continue True and name set to an existing folder you want to continue training on
+center:
+    UB1: "stge"
+    UB2: "jarv"
 data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     binary_labels: ['NOR','HCM'] #['NOR','ABNOR'] for label encoder
     lco_crossvalidation: True
     centers:
-        - "adde" 
+        # - "adde" 
         - "jarv"
         - "stge"
     manufacturers: ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']

@@ -11,9 +11,6 @@ import warnings
 import multiprocessing
 import pickle
 import numpy as np
-import pandas as pd
-import nibabel as nib
-import SimpleITK as sitk
 from collections import OrderedDict
 
 # import visdom
@@ -21,35 +18,10 @@ from math import floor, ceil
 from pathlib import Path
 from tqdm import tqdm
 
-from sklearn.model_selection import StratifiedKFold 
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid, save_image
 torch.manual_seed(seed)
-import torchio as tio
-from torchio.transforms import (
-    RescaleIntensity,
-    RandomElasticDeformation,
-    RandomFlip,
-    RandomAffine,
-    # intensity
-    RandomMotion,
-    RandomGhosting,
-    RandomSpike,
-    RandomBiasField,
-    RandomBlur,
-    RandomNoise,
-    RandomSwap,
-    RandomAnisotropy,
-#     RandomLabelsToImage,
-    RandomGamma,
-    OneOf,
-    CropOrPad,
-    ZNormalization,
-    HistogramStandardization,
-    Compose,
-)
 from PIL import Image
 from src.data_handling.optimam_dataset import OPTIMAMDataset
 from src.data_augmentation.breast_density.data.resize_image import *
@@ -84,8 +56,8 @@ def preprocess_one_image_OPTIMAM(image):
     label = np.single(0) if image.status=='Benign' else np.single(1)
     # status = image.status # ['Benign', 'Malignant', 'Interval Cancer', 'Normal']
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
-    view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
-    laterality = image.laterality # L R
+    # view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
+    # laterality = image.laterality # L R
 
     img_pil = Image.open(image.path).convert('RGB')
     img_np = np.array(img_pil)
@@ -108,7 +80,9 @@ class OPTIMAMDataset_Torch():
         # self.clients_selected = optimam_clients.get_clients_by_site_and_manufacturer(data_owner, manufacturer)
         self.images = []
         for client in tqdm(self.clients_selected):
-            self.images = self.images + client.get_images_by_pathology(['mass'])
+            for study in client:
+                for image in study:
+                    self.images.append(image) #client.get_images() #get_images_by_pathology(['mass'])
 
     def __len__(self):
         return len(self.images)
@@ -122,13 +96,23 @@ class OPTIMAMDataset_Torch():
             image = self.images[idx]
             return preprocess_one_image_OPTIMAM(image)
 
+class UB_DataSplit():
+    def __init__(self, center, sanity_check=sanity_check):
+        print("Single train center data loading") # Not adviced
+        center_dataset = OPTIMAMDataset_Torch(center)
+        train_size = int(0.9*len(center_dataset))
+        self.training_set = center_dataset[:train_size]
+        self.validation_set = center_dataset[train_size:]
 
-class OPTIMAMDataLoader():
+    def __len__(self):
+        return len(self.training_set) + len(self.test_set)
+
+class DataSplit():
     def __init__(self, fold_index, sanity_check=sanity_check):
         all_centers = config['data']['centers']
         test_center = all_centers[fold_index]
         train_centers = [x for i, x in enumerate(all_centers) if i!=fold_index]
-        if isinstance(train_centers, list):
+        if len(train_centers) > 1:
             print(f"Train centers: {train_centers}")
             self.training_set, self.validation_set = [], []
             for train_center in train_centers:
