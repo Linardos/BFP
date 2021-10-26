@@ -1,7 +1,8 @@
 *.pkl
+*checkpoint*
 cifar-10*
 experiments/*
-.*
+.git
 !/.gitignore
 *__pycache__*
 *.pyc
