@@ -92,6 +92,8 @@ class BreastClassificationClient(fl.client.NumPyClient):
         results = {"accuracy":float(accuracy)} #, "predictions": predictions}
         return float(loss), len(validation_loader), results 
 
-fl.client.start_numpy_client("[::]:8080", client=BreastClassificationClient())
+# fl.client.start_numpy_client("[::]:8080", client=BreastClassificationClient())
+fl.client.start_numpy_client("84.88.186.195:8080", client=BreastClassificationClient())
+
 # fl.client.start_numpy_client("fe80::d03d:18ff:feb6:d5fa/64", client=BreastClassificationClient())
 # fl.client.start_numpy_client("161.116.4.137:22", client=BreastClassificationClient())
