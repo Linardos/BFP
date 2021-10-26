@@ -45,4 +45,4 @@ strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
 )
 
-fl.server.start_server(strategy=strategy, config={"num_rounds": 3})
+fl.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": 3})
