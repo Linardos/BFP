@@ -42,14 +42,12 @@ def _get_average_mapping(percentiles_database: np.ndarray) -> np.ndarray:
     final_map = slopes.dot(percentiles_database) / num_images + intercepts
     return final_map
 
-
 def _get_percentiles(percentiles_cutoff: Tuple[float, float]) -> np.ndarray:
     quartiles = np.arange(25, 100, 25).tolist()
     deciles = np.arange(10, 100, 10).tolist()
     all_percentiles = list(percentiles_cutoff) + quartiles + deciles
     percentiles = sorted(set(all_percentiles))
     return np.array(percentiles)
-
 
 def get_hist_stand_landmarks(images_paths, cutoff: Optional[Tuple[float, float]] = None,
     output_path: Optional[str] = None) -> np.ndarray:
@@ -159,3 +157,28 @@ def plot_img_and_hist(image, axes, bins=256):
     ax_cdf.set_yticks([])
 
     return ax_img, ax_hist, ax_cdf
+
+
+# Class example to make your custom Transform
+
+# class ImageStandardisationRGB:
+#     def __init__(self, landmarks_path, to_rgb=False):
+#         self.landmarks_path = torch.load(landmarks_path)
+#         self.to_rgb = to_rgb
+
+#     def __call__(self, results):
+#         for key in results.get('img_fields', ['img']):
+#             img = results[key]
+#             img = np.float32(img) if img.dtype != np.float32 else img.copy()
+#             #img = ImageOps.grayscale(img)
+#             nyul_img = apply_hist_stand_landmarks(img, self.landmarks_path)
+#             nyul_img = nyul_img.astype(np.uint8)
+#             results[key] = nyul_img #Image.fromarray(nyul_img)
+
+#         results['landmarks_path'] = self.landmarks_path
+#         return results
+
+#     def __repr__(self):
+#         repr_str = self.__class__.__name__
+#         repr_str += f'(landmarks_path={self.landmarks_path}, to_rgb={self.to_rgb})'
+#         return repr_str

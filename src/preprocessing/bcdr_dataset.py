@@ -106,7 +106,9 @@ if __name__ == '__main__':
                 scan_info.update({'view': IMAGE_TYPE_DICT[int(image_info_row.image_type_id)][1]})
                 scan_info.update({'age': image_info_row.age})
                 scan_info.update({'classification': 'Normal'})
-                scan = cv2.imread(os.path.join(dataset_path, image_filename), cv2.IMREAD_UNCHANGED)
+                scan = cv2.imread(os.path.join(dataset_path, image_filename), cv2.IMREAD_UNCHANGED) #8bit
+                # import tifffile as tiff
+                # a = tiff.imread(os.path.join(dataset_path, image_filename))
                 scan_info.update({'scan_height': scan.shape[0]})
                 scan_info.update({'scan_width': scan.shape[1]})
                 cropped_png_path = os.path.join(output_path, image_filename.replace('tif', 'png'))
