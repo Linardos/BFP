@@ -25,18 +25,23 @@ torch.manual_seed(seed)
 from PIL import Image
 from src.data_handling.optimam_dataset import OPTIMAMDataset
 from src.data_augmentation.breast_density.data.resize_image import *
+from src.preprocessing.histogram_standardization import apply_hist_stand_landmarks
+# from src.data_handling.mmg_detection_datasets import *
+
 from torch.utils.data import BatchSampler, RandomSampler 
 
 # Constants
+
+HOME_PATH = Path.home()
 config_file = Path('config.yaml')
 with open(config_file) as file:
-  config = yaml.safe_load(file)
-if config['name']=='sanity_check':
+  CONFIG = yaml.safe_load(file)
+if CONFIG['name']=='sanity_check':
     print("Initiating SANITY CHECK.")
     sanity_check = True
     
 # Cropped scans GPU Server
-info_csv='/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv'
+info_csv=CONFIG['paths']['info_csv']
 dataset_path='/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images'
 output_path = '/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/detection/mask_rcnn'
 cropped_scans = True
@@ -65,17 +70,22 @@ def preprocess_one_image_OPTIMAM(image):
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')
     image = torch.from_numpy(rescaled_img).permute(2,0,1)
+    
+    # Histogram Matching 
+    landmarks_values = torch.load(HOME_PATH / CONFIG['paths']['landmarks'])
+    apply_hist_stand_landmarks(image, landmarks_values)
 
     paddedimg = torch.zeros(3,224,224)
     c,h,w = image.shape
     paddedimg[:,-h:,-w:]=image
     return paddedimg, label
 
-class OPTIMAMDataset_Torch():
+class OPTIMAMDataset_Torch(): # Should work for any center
     def __init__(self, data_owner):#, manufacturer):
         # Maybe we add the worker here
         optimam_clients = OPTIMAMDataset(info_csv, dataset_path, detection=True, load_max=-1, 
                             cropped_scans=cropped_scans)
+                            
         self.clients_selected = optimam_clients.get_clients_by_site(data_owner)
         # self.clients_selected = optimam_clients.get_clients_by_site_and_manufacturer(data_owner, manufacturer)
         self.images = []
@@ -105,11 +115,11 @@ class UB_DataSplit():
         self.validation_set = center_dataset[train_size:]
 
     def __len__(self):
-        return len(self.training_set) + len(self.test_set)
+        return len(self.training_set) + len(self.validation_set)
 
 class DataSplit():
     def __init__(self, fold_index, sanity_check=sanity_check):
-        all_centers = config['data']['centers']
+        all_centers = CONFIG['data']['centers']
         test_center = all_centers[fold_index]
         train_centers = [x for i, x in enumerate(all_centers) if i!=fold_index]
         if len(train_centers) > 1:
@@ -140,8 +150,8 @@ class DataSplit():
     # def forward(self, load_test=False):
     #     """This will define the data loaders. There should be a separate one for each center.
     #     """
-    #     training_batch_size = config['hyperparameters']['training_batch_size'] 
-    #     test_batch_size = config['hyperparameters']['test_batch_size']
+    #     training_batch_size = CONFIG['hyperparameters']['training_batch_size'] 
+    #     test_batch_size = CONFIG['hyperparameters']['test_batch_size']
 
     #     if load_test:
     #         print(f"Testing with batch size: {test_batch_size}")
