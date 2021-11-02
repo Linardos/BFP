@@ -6,12 +6,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
-from torchvision.datasets import CIFAR10
+# from torchvision.datasets import CIFAR10
 import flwr as fl
 import importlib
 
 from models import nets
-from data_loader import UB_DataSplit, DataSplit
+from data_loader import ALLDataset
 from tqdm import tqdm
 import numpy as np
 from pathlib import Path
@@ -32,37 +32,25 @@ with open(config_file) as file:
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
-# REMOVE FOR NON-UB CENTERS:
-# ub_log_dict = {}
-# with open(Path(HOME_PATH / CONFIG['paths']['ub_logs']) / "ub_log.pkl", 'wb') as handle:
-#     pickle.dump(ub_log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+def load_data():
+    """Load Breast Cancer training and validation set."""
+    print('Loading data...')
+    training_loader = DataLoader(ALLDataset(mode='train'), batch_size=32, shuffle=True)
+    validation_loader = DataLoader(ALLDataset(mode='val'), batch_size=32, shuffle=True)
+    test_loader = DataLoader(ALLDataset(mode='test'), batch_size=32, shuffle=True)
+    return training_loader, validation_loader #test_loader
 
 # def load_data():
-#     """Load Breast Cancer training and validation set."""
-#     print('Loading data...')
-#     dataset = UB_DataSplit(center=CONFIG['center']['UB2'])
-#     # dataset = DataSplit(0)
-#     training_loader = DataLoader(dataset.training_set, batch_size=32, shuffle=True)
-#     validation_loader = DataLoader(dataset.validation_set, batch_size=32, shuffle=True)
-#     # test_loader = DataLoader(dataset.test_set, batch_size=10, shuffle=True)
-#     return training_loader, validation_loader #test_loader
+#     """Load CIFAR-10 (training and test set)."""
+#     transform = transforms.Compose(
+#     [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
+#     )
+#     trainset = CIFAR10(".", train=True, download=True, transform=transform)
+#     testset = CIFAR10(".", train=False, download=True, transform=transform)
+#     trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
+#     testloader = DataLoader(testset, batch_size=32)
+#     return trainloader, testloader
 
-def load_data():
-    """Load CIFAR-10 (training and test set)."""
-    transform = transforms.Compose(
-    [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-    )
-    trainset = CIFAR10(".", train=True, download=True, transform=transform)
-    testset = CIFAR10(".", train=False, download=True, transform=transform)
-    trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-    testloader = DataLoader(testset, batch_size=32)
-    return trainloader, testloader
-
-# Load model and data
-# net = nets.ResNet18Classifier(in_ch=3, out_ch=10, linear_ch=512, pretrained=False)
-net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
-net.to(DEVICE)
-train_loader, validation_loader = load_data()
 
 def train(net, training_loader, epochs, criterion):
     """Train the network on the training set."""
@@ -74,15 +62,6 @@ def train(net, training_loader, epochs, criterion):
     for _ in range(epochs):
         for i, batch in enumerate(tqdm(training_loader)):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
-            # images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE)
-            #REMOVE FOR NON-UB CENTERS - take a sample to see the visualize the input to the model
-            # if i==0:
-            #     with open(Path(HOME_PATH / CONFIG['paths']['ub_logs']) / 'ub_log.pkl', 'rb') as handle:
-            #         ub_log_dict = pickle.load(handle)
-            #     ub_log_dict['sample_batch'] = images 
-            #     with open(Path(HOME_PATH / CONFIG['paths']['ub_logs']) / 'ub_log.pkl', 'wb') as handle:
-            #         pickle.dump(ub_log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
             optimizer.zero_grad()
             loss = criterion(net(images), labels)
             cumulative_loss += loss.item()
@@ -90,13 +69,6 @@ def train(net, training_loader, epochs, criterion):
             optimizer.step()
 
             losses.append(loss)
-    #REMOVE FOR NON-UB CENTERS - this needs to be replaced once I figure out how to store predictions in the server
-    # with open(Path(HOME_PATH / CONFIG['paths']['ub_logs']) / 'ub_log.pkl', 'rb') as handle:
-    #     ub_log_dict = pickle.load(handle)
-    # ub_log_dict['losses'] = losses
-    # with open(Path(HOME_PATH / CONFIG['paths']['ub_logs']) / 'ub_log.pkl', 'wb') as handle:
-    #     pickle.dump(ub_log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
 
     train_results = cumulative_loss #(losses, predictions)
     return train_results
@@ -131,6 +103,11 @@ def test(net, validation_loader, criterion):
     test_results = (loss, accuracy) #, predictions)
     return test_results
 
+# Load model and data
+# net = nets.ResNet18Classifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=False)
+net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
+net.to(DEVICE)
+train_loader, validation_loader = load_data()
 
 class ClassificationClient(fl.client.NumPyClient):
     def get_parameters(self):
@@ -156,11 +133,8 @@ class ClassificationClient(fl.client.NumPyClient):
         test_results = {
             "accuracy":float(accuracy_aggregated),
             # "predictions":predictions
-        } #, "predictions": predictions}
+        }
         return float(loss), len(validation_loader), test_results 
 
-#fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
-
-# fl.client.start_numpy_client("fe80::d03d:18ff:feb6:d5fa/64", client=ClassificationClient())
-# fl.client.start_numpy_client("161.116.4.137:22", client=ClassificationClient())
+fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
+# fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())

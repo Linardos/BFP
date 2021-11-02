@@ -13,7 +13,6 @@ import pickle
 import numpy as np
 from collections import OrderedDict
 
-# import visdom
 from math import floor, ceil
 from pathlib import Path
 from tqdm import tqdm
@@ -23,10 +22,9 @@ import torch.nn.functional as F
 from torchvision.utils import make_grid, save_image
 torch.manual_seed(seed)
 from PIL import Image
-from src.data_handling.optimam_dataset import OPTIMAMDataset
 from src.data_augmentation.breast_density.data.resize_image import *
 from src.preprocessing.histogram_standardization import apply_hist_stand_landmarks
-# from src.data_handling.mmg_detection_datasets import *
+from src.data_handling.mmg_detection_datasets import *
 
 from torch.utils.data import BatchSampler, RandomSampler 
 
@@ -42,13 +40,11 @@ if CONFIG['name']=='sanity_check':
     
 # Cropped scans GPU Server
 info_csv=CONFIG['paths']['info_csv']
-dataset_path='/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images'
-output_path = '/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/detection/mask_rcnn'
-cropped_scans = True
+dataset_path=CONFIG['paths']['datapath'] 
+cropped_to_breast = True
 fit_to_breast = True
 
 detection = False
-load_max = -1
 pathologies = ['mass'] #['mass', 'calcifications', 'suspicious_calcifications', 'architectural_distortion'] # None to select all
 # Resize images keeping aspect ratio
 rescale_height = 224
@@ -80,19 +76,41 @@ def preprocess_one_image_OPTIMAM(image):
     paddedimg[:,-h:,-w:]=image
     return paddedimg, label
 
-class OPTIMAMDataset_Torch(): # Should work for any center
-    def __init__(self, data_owner):#, manufacturer):
+class ALLDataset(): # Should work for any center
+    def __init__(self, mode='train', load_max=1000, center=None): 
         # Maybe we add the worker here
-        optimam_clients = OPTIMAMDataset(info_csv, dataset_path, detection=True, load_max=-1, 
-                            cropped_scans=cropped_scans)
-                            
-        self.clients_selected = optimam_clients.get_clients_by_site(data_owner)
-        # self.clients_selected = optimam_clients.get_clients_by_site_and_manufacturer(data_owner, manufacturer)
-        self.images = []
-        for client in tqdm(self.clients_selected):
-            for study in client:
-                for image in study:
-                    self.images.append(image) #client.get_images() #get_images_by_pathology(['mass'])
+        subjects = OPTIMAMDataset(info_csv, dataset_path, detection=False, load_max=-1, 
+                            cropped_to_breast=cropped_to_breast)
+        
+        subjects_selected = {}
+        if center!=None:
+            total_subjects = subjects.get_images_by_site(center)
+        else:
+            # General case
+            subjects_selected['benign'] = subjects.get_clients_by_status('Benign')[:load_max] #Note that clients means subjects here.
+            subjects_selected['malignant'] = subjects.get_clients_by_status('Malignant')[:load_max]
+            subjects_selected['normal'] = subjects.get_clients_by_status('Normal')[:load_max]
+            total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] + subjects_selected['normal']
+        random.shuffle(total_subjects) 
+        # Data Split
+        training_subjects = total_subjects[:int(len(total_subjects)*0.8)]
+        validation_subjects = total_subjects[int(len(total_subjects)*0.8):int(len(total_subjects)*0.9)]
+        test_subjects = total_subjects[int(len(total_subjects)*0.9):]
+
+        def extract_images(subjects):
+            images=[]
+            for subject in tqdm(subjects):
+                for study in subject:
+                    for image in study:
+                        images.append(image)
+            return images
+
+        if mode == 'train':
+            self.images = extract_images(training_subjects)
+        elif mode == 'val':
+            self.images = extract_images(validation_subjects) 
+        elif mode == 'test':
+            self.images = extract_images(test_subjects)
 
     def __len__(self):
         return len(self.images)
@@ -105,69 +123,3 @@ class OPTIMAMDataset_Torch(): # Should work for any center
             # Do your handling for a plain index
             image = self.images[idx]
             return preprocess_one_image_OPTIMAM(image)
-
-class UB_DataSplit():
-    def __init__(self, center, sanity_check=sanity_check):
-        print("Single train center data loading") # Not adviced
-        center_dataset = OPTIMAMDataset_Torch(center)
-        train_size = int(0.9*len(center_dataset))
-        self.training_set = center_dataset[:train_size]
-        self.validation_set = center_dataset[train_size:]
-
-    def __len__(self):
-        return len(self.training_set) + len(self.validation_set)
-
-class DataSplit():
-    def __init__(self, fold_index, sanity_check=sanity_check):
-        all_centers = CONFIG['data']['centers']
-        test_center = all_centers[fold_index]
-        train_centers = [x for i, x in enumerate(all_centers) if i!=fold_index]
-        if len(train_centers) > 1:
-            print(f"Train centers: {train_centers}")
-            self.training_set, self.validation_set = [], []
-            for train_center in train_centers:
-                center_dataset = OPTIMAMDataset_Torch(train_center)
-                if sanity_check:
-                    center_dataset = center_dataset[:10]
-                train_size = int(0.9*len(center_dataset))
-                self.training_set.append(center_dataset[:train_size])
-                self.validation_set.append(center_dataset[train_size:])
-        else:
-            print("Single train center data loading") # Not adviced
-            center_dataset = OPTIMAMDataset_Torch(train_centers)
-            train_size = int(0.9*len(center_dataset))
-            self.training_set = center_dataset[:train_size]
-            self.validation_set = center_dataset[train_size:]
-
-        self.test_set = OPTIMAMDataset_Torch(test_center)
-
-        if sanity_check:
-            self.test_set = self.test_set[:3]
-
-    def __len__(self):
-        return len(self.training_set) + len(self.test_set)
-
-    # def forward(self, load_test=False):
-    #     """This will define the data loaders. There should be a separate one for each center.
-    #     """
-    #     training_batch_size = CONFIG['hyperparameters']['training_batch_size'] 
-    #     test_batch_size = CONFIG['hyperparameters']['test_batch_size']
-
-    #     if load_test:
-    #         print(f"Testing with batch size: {test_batch_size}")
-    #         # test_set = self.test_set
-    #         test_loader = torch.utils.data.DataLoader(
-    #             self.test_set, batch_size=test_batch_size, shuffle=True)
-    #         return test_loader
-
-    #     if isinstance(self.training_set, list):
-    #         print(f"Training with a batch size of: {training_batch_size}")
-    #         # train_loaders, validation_loaders = [], []
-    #         for train, val in zip(self.training_set, self.validation_set):
-    #             training_loader = torch.utils.data.DataLoader(
-    #                 train, batch_size=training_batch_size, shuffle=True)
-    #             validation_loader = torch.utils.data.DataLoader(
-    #                 val, batch_size=training_batch_size, shuffle=True)
-    #             yield training_loader, validation_loader
-    #     else:
-    #         raise NotImplementedError("You are using a single center for training. This is not implemented and not advised. Please provide a list of training centers")
