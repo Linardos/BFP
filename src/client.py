@@ -22,7 +22,6 @@ def import_class(name):
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 
-
 HOME_PATH = Path.home()
 
 config_file = 'config.yaml'
@@ -50,7 +49,6 @@ def load_data():
 #     trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
 #     testloader = DataLoader(testset, batch_size=32)
 #     return trainloader, testloader
-
 
 def train(net, training_loader, epochs, criterion):
     """Train the network on the training set."""
@@ -107,7 +105,7 @@ def test(net, validation_loader, criterion):
 # net = nets.ResNet18Classifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=False)
 net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
 net.to(DEVICE)
-train_loader, validation_loader = load_data()
+train_loader, validation_loader = load_data() # Should change to sample differently every time.
 
 class ClassificationClient(fl.client.NumPyClient):
     def get_parameters(self):

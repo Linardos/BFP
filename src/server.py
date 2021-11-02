@@ -4,6 +4,7 @@ from typing import List, Tuple, Optional
 from pathlib import Path
 import pickle
 import yaml
+import os
 
 HOME_PATH = Path.home()
 config_file = Path('config.yaml')
@@ -13,7 +14,10 @@ with open(config_file) as file:
 
 log_dict = {'accuracies_aggregated': [],
             'local_loss': []}
-with open(Path(HOME_PATH / CONFIG['paths']['logs']) / "log.pkl", 'wb') as handle:
+PATH_TO_LOG = Path(HOME_PATH / CONFIG['paths']['logs'])
+if not os.path.exists(PATH_TO_LOG):
+    os.mkdir(PATH_TO_LOG)
+with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
@@ -28,11 +32,11 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
         # print([r.metrics.keys() for _, r in results])
         losses = [r.metrics["cumulative_loss"] for _, r in results]
         print(f"Length results is {len(losses)}")
-        with open(Path(HOME_PATH / CONFIG['paths']['logs']) / 'log.pkl', 'rb') as handle:
+        with open(PATH_TO_LOG / 'log.pkl', 'rb') as handle:
             log_dict = pickle.load(handle)
         print(log_dict)
         log_dict['local_loss'].append(losses)
-        with open(Path(HOME_PATH / CONFIG['paths']['logs']) / "log.pkl", 'wb') as handle:
+        with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         """Aggregate model weights using weighted average and store checkpoint"""
