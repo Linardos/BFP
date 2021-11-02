@@ -157,7 +157,7 @@ class OPTIMAMImage():
             self.view = view
             return True
         else:
-            print(f'Error: view {view} not found in list -> Discard image')
+            # print(f'Error: view {view} not found in list -> Discard image')
             return False
     def set_laterality(self, laterality):
         self.laterality = laterality

@@ -78,9 +78,8 @@ def preprocess_one_image_OPTIMAM(image):
 
 class ALLDataset(): # Should work for any center
     def __init__(self, mode='train', load_max=1000, center=None): 
-        # Maybe we add the worker here
         subjects = OPTIMAMDataset(info_csv, dataset_path, detection=False, load_max=-1, 
-                            cropped_to_breast=cropped_to_breast)
+                            cropped_to_breast=cropped_to_breast) # we should be able to load any dataset with this
         
         subjects_selected = {}
         if center!=None:
