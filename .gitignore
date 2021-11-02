@@ -11,3 +11,4 @@ envs/
 *minimal_reproducible*
 *log*
 *torchio/
+!/src/preprocessing/optimam_train_hologic_landmarks.pth
