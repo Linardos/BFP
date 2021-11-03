@@ -41,5 +41,5 @@ ADD ./logs ./logs
 
 RUN export PYTHONPATH=~/BFP
 RUN touch __init__.py
-RUN python3 client.py
+#RUN python3 client.py
 
