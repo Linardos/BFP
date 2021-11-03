@@ -30,14 +30,14 @@ RUN export PYTHONPATH=~/BFP
 RUN touch __init__.py 
 
 WORKDIR /BFP
-COPY ./*.yaml ./
-COPY ./*.py ./
-COPY ./models ./models
-COPY ./preprocessing ./preprocessing
-COPY ./data_augmentation ./data_augmentation
-COPY ./data_handling ./data_handling
-COPY ./requirements.txt ./requirements.txt
-COPY ./logs ./logs
+ADD ./*.yaml ./
+ADD ./*.py ./
+ADD ./models ./models
+ADD ./preprocessing ./preprocessing
+ADD ./data_augmentation ./data_augmentation
+ADD ./data_handling ./data_handling
+ADD ./requirements.txt ./requirements.txt
+ADD ./logs ./logs
 
 RUN export PYTHONPATH=~/BFP
 RUN touch __init__.py
