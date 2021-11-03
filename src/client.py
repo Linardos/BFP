@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 # from torchvision.datasets import CIFAR10
 import flwr as fl
 import importlib
+import os
 
 from models import nets
 from data_loader import ALLDataset
@@ -16,7 +17,7 @@ from tqdm import tqdm
 import numpy as np
 from pathlib import Path
 import pickle
-import argparse
+# import argparse
 
 
 def import_class(name):
@@ -30,10 +31,12 @@ config_file = 'config.yaml'
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
+CSV_PATH = os.environ['csv_path']
+DATASET_PATH = os.environ['dataset_path']
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
-parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
+# parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
+# parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
 parser.add_argument('--center', help='use only when you have multi-center data', default=None)
 
 args = parser.parse_args()
@@ -44,9 +47,9 @@ CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'train', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    validation_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'val', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    test_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'test', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
     return training_loader, validation_loader #test_loader
 
 # def load_data():
