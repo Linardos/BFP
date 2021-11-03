@@ -16,6 +16,8 @@ from tqdm import tqdm
 import numpy as np
 from pathlib import Path
 import pickle
+import argparse
+
 
 def import_class(name):
     module_name, class_name = name.rsplit('.', 1)
@@ -28,15 +30,23 @@ config_file = 'config.yaml'
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
+parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
+parser.add_argument('--center', help='use only when you have multi-center data', default=None)
+
+args = parser.parse_args()
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(mode='train'), batch_size=32, shuffle=True)
-    validation_loader = DataLoader(ALLDataset(mode='val'), batch_size=32, shuffle=True)
-    test_loader = DataLoader(ALLDataset(mode='test'), batch_size=32, shuffle=True)
+    training_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'train', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    validation_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'val', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    test_loader = DataLoader(ALLDataset(args.dataset, args.csv, 'test', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
     return training_loader, validation_loader #test_loader
 
 # def load_data():
@@ -134,5 +144,5 @@ class ClassificationClient(fl.client.NumPyClient):
         }
         return float(loss), len(validation_loader), test_results 
 
-fl.client.start_numpy_client("[::]:8000", client=ClassificationClient())
+fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
 # fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())

@@ -314,7 +314,7 @@ class OPTIMAMDataset(DatasetMMG):
                 elif view in EXTRA_VIEWS_OPTIMAM:
                     new_image.view = view
                 else:
-                    print(f'Error: view {view} not found in list -> Discard image')
+                    # print(f'Error: view {view} not found in list -> Discard image')
                     valid_view =  False
                 if not valid_view:
                     continue
@@ -515,7 +515,7 @@ class INBreastDataset(DatasetMMG):
                 elif view in MLO_VIEWS_INBREAST:
                     new_image.view = 'MLO'
                 else:
-                    print(f'Error: view {view} not found in list -> Discard image')
+                    # print(f'Error: view {view} not found in list -> Discard image')
                     valid_view =  False
                 if not valid_view:
                     continue
@@ -772,7 +772,7 @@ class BCDRDataset(DatasetMMG):
                             elif view in MLO_VIEWS_BCDR:
                                 new_image.view = 'MLO'
                             else:
-                                print(f'Error: view {view} not found in list -> Discard image')
+                                # print(f'Error: view {view} not found in list -> Discard image')
                                 valid_view =  False
                             if not valid_view:
                                 continue

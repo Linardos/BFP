@@ -39,8 +39,8 @@ if CONFIG['name']=='sanity_check':
     sanity_check = True
     
 # Cropped scans GPU Server
-info_csv=CONFIG['paths']['info_csv']
-dataset_path=CONFIG['paths']['datapath'] 
+# csv_path=CONFIG['paths']['csv_path']
+# dataset_path=CONFIG['paths']['datapath'] 
 cropped_to_breast = True
 fit_to_breast = True
 
@@ -77,8 +77,8 @@ def preprocess_one_image_OPTIMAM(image):
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
-    def __init__(self, mode='train', load_max=1000, center=None): 
-        subjects = OPTIMAMDataset(info_csv, dataset_path, detection=False, load_max=-1, 
+    def __init__(self, dataset_path, csv_path, mode='train', load_max=1000, center=None): 
+        subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
                             cropped_to_breast=cropped_to_breast) # we should be able to load any dataset with this
         
         subjects_selected = {}
