@@ -39,6 +39,7 @@ ADD ./data_handling ./data_handling
 ADD ./requirements.txt ./requirements.txt
 ADD ./logs ./logs
 
+RUN mkdir /BFP/dataset
 RUN export PYTHONPATH=~/BFP
 RUN touch __init__.py
 #RUN python3 client.py

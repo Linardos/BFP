@@ -36,12 +36,12 @@ DATASET_PATH = os.environ['dataset_path']
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
 
-parser = argparse.ArgumentParser(description='Process some integers.')
-# parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
-# parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
-parser.add_argument('--center', help='use only when you have multi-center data', default=None)
+# parser = argparse.ArgumentParser(description='Process some integers.')
+# # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
+# # parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
+# parser.add_argument('--center', help='use only when you have multi-center data', default=None)
 
-args = parser.parse_args()
+# args = parser.parse_args()
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
@@ -49,9 +49,9 @@ CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test', center=args.center), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
     return training_loader, validation_loader #test_loader
 
 # def load_data():
