@@ -149,5 +149,5 @@ class ClassificationClient(fl.client.NumPyClient):
         }
         return float(loss), len(validation_loader), test_results 
 
-fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-# fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+#fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
+fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
