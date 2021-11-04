@@ -16,20 +16,14 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN git clone https://github.com/Linardos/BFP 
 #RUN cd src
-WORKDIR "/BFP/src"
+WORKDIR "/BFP"
 #RUN pip install virtualenv
 RUN apt install python3.8-venv
 RUN python3 -m venv fl_env 
 RUN source fl_env/bin/activate 
 RUN pwd
 
-RUN pip install -r requirements.txt 
-RUN pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio===0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html 
-RUN apt-get install ffmpeg libsm6 libxext6 -y 
-RUN export PYTHONPATH=~/BFP 
-RUN touch __init__.py 
-
-WORKDIR /BFP
+#WORKDIR /BFP
 ADD ./*.yaml ./
 ADD ./*.py ./
 ADD ./models ./models
@@ -37,7 +31,13 @@ ADD ./preprocessing ./preprocessing
 ADD ./data_augmentation ./data_augmentation
 ADD ./data_handling ./data_handling
 ADD ./requirements.txt ./requirements.txt
-ADD ./logs ./logs
+#ADD ./logs ./logs
+
+RUN pip install -r requirements.txt
+RUN pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio===0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+RUN apt-get install ffmpeg libsm6 libxext6 -y
+RUN export PYTHONPATH=~/BFP
+RUN touch __init__.py
 
 RUN mkdir /BFP/dataset
 RUN export PYTHONPATH=~/BFP

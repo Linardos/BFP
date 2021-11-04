@@ -1,0 +1,3 @@
+INFO flower 2021-11-04 15:43:21,044 | app.py:77 | Flower server running (insecure, 30 rounds)
+INFO flower 2021-11-04 15:43:21,044 | server.py:118 | Initializing global parameters
+INFO flower 2021-11-04 15:43:21,044 | server.py:304 | Requesting initial parameters from one random client
