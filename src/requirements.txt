@@ -12,7 +12,4 @@ scikit_learn
 scipy
 SimpleITK
 scikit-image
-torch==1.10.0
-torchio==0.18.61
-torchvision==0.11.1
 tqdm==4.62.3

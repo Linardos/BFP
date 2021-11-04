@@ -33,6 +33,8 @@ with open(config_file) as file:
 
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
+print(f'Here dataset path {DATASET_PATH}')
+print(f'Here csv path {CSV_PATH}')
 
 parser = argparse.ArgumentParser(description='Process some integers.')
 # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
