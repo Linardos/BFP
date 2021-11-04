@@ -44,3 +44,6 @@ RUN export PYTHONPATH=~/BFP
 RUN touch __init__.py
 #RUN python3 client.py
 
+#CMD [ "client.py --csv_path --dataset_path" ]
+#ENTRYPOINT [ "python3" ]
+
