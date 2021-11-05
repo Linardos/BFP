@@ -2,15 +2,7 @@
 #FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 FROM ubuntu:20.04
 RUN apt-get update
-RUN apt-get install -y python3-pip
-
-# Install software 
-RUN apt-get install -y git
-RUN apt install python3-pip
-
-# set bash as current shell
-RUN chsh -s /bin/bash
-SHELL ["/bin/bash", "-c"]
+RUN apt-get install -y python3-pip git
 
 ARG DEBIAN_FRONTEND=noninteractive
 
