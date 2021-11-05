@@ -31,13 +31,10 @@ config_file = 'config.yaml'
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
-SERVER= os.getenv('server',"84.88.186.195:8080")
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
-print(f'Here server {SERVER}')
-
 
 # parser = argparse.ArgumentParser(description='Process some integers.')
 # # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
@@ -52,9 +49,9 @@ CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
-    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test'), batch_size=CONFIG['hyperparameters']['batch_size'], shuffle=True)
+    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train'), batch_size=CONFIG['hyperparameters']['batch_size'])
+    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val'), batch_size=CONFIG['hyperparameters']['batch_size'])
+    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test'), batch_size=CONFIG['hyperparameters']['batch_size'])
     return training_loader, validation_loader #test_loader
 
 # def load_data():
@@ -153,4 +150,4 @@ class ClassificationClient(fl.client.NumPyClient):
         return float(loss), len(validation_loader), test_results 
 
 #fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-fl.client.start_numpy_client(SERVER, client=ClassificationClient())
+fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())

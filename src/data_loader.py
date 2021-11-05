@@ -12,6 +12,8 @@ import multiprocessing
 import pickle
 import numpy as np
 from collections import OrderedDict
+import sys
+sys.path.append('/BFP')
 
 from math import floor, ceil
 from pathlib import Path
