@@ -26,12 +26,10 @@ RUN pwd
 RUN pip install -r requirements.txt
 RUN pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio===0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 RUN apt-get install ffmpeg libsm6 libxext6 -y
-RUN export PYTHONPATH=~/BFP
-RUN touch __init__.py
 
 RUN mkdir /BFP/dataset
-RUN export PYTHONPATH=~/BFP
-RUN touch __init__.py
+ENV PYTHONPATH "${PYTHONPATH}:/BFP"
+
 #RUN python3 client.py
 
 #CMD [ "client.py --csv_path --dataset_path" ]
