@@ -6,7 +6,7 @@ RUN apt-get install -y python3-pip git
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN git clone https://github.com/Linardos/BFP 
+#RUN git clone https://github.com/Linardos/BFP 
 WORKDIR "/BFP/src"
 #RUN cd src
 #RUN pip install virtualenv

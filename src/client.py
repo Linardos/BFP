@@ -31,10 +31,13 @@ config_file = 'config.yaml'
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
+SERVER= os.getenv('server',"84.88.186.195:8080")
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
+print(f'Here server {SERVER}')
+
 
 # parser = argparse.ArgumentParser(description='Process some integers.')
 # # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
@@ -150,4 +153,4 @@ class ClassificationClient(fl.client.NumPyClient):
         return float(loss), len(validation_loader), test_results 
 
 #fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+fl.client.start_numpy_client(SERVER, client=ClassificationClient())

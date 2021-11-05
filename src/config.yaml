@@ -34,15 +34,3 @@ center: # Ignore this
 data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     labels: [0,1]
-paths:
-    # Used by client:
-    # These are files we send the clients. So the path we define ourselves:
-    landmarks: BFP/src/preprocessing/optimam_train_hologic_landmarks.pth
-    # ub_logs: workenv/BFP/src/visualizations # Ignore this
-    # These are paths we should be given from the partners. The docker should mount them:
-    csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
-    dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
-    # Used by server:
-    logs: BFP/src/logs
-    experiments: BFP/experiments
-    misc: /experiment/misc
