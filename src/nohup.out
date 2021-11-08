@@ -22,3 +22,5 @@ This format is deprecated and will be removed in a future release. It should use
 
 instead.
 
+E1108 11:54:31.570645802  156292 http_server_filter.cc:303]  GET request without QUERY
+E1108 11:54:32.332916468  156292 http_server_filter.cc:303]  GET request without QUERY
