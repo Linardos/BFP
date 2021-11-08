@@ -1,0 +1,26 @@
+INFO flower 2021-11-08 11:16:27,766 | app.py:77 | Flower server running (insecure, 30 rounds)
+INFO flower 2021-11-08 11:16:27,766 | server.py:118 | Initializing global parameters
+INFO flower 2021-11-08 11:16:27,766 | server.py:304 | Requesting initial parameters from one random client
+INFO flower 2021-11-08 11:20:28,905 | server.py:307 | Received initial parameters from one random client
+INFO flower 2021-11-08 11:20:28,905 | server.py:120 | Evaluating initial parameters
+INFO flower 2021-11-08 11:20:28,905 | server.py:133 | FL starting
+DEBUG flower 2021-11-08 11:20:32,214 | server.py:251 | fit_round: strategy sampled 2 clients (out of 2)
+DEBUG flower 2021-11-08 11:20:41,066 | server.py:260 | fit_round received 2 results and 0 failures
+/home/user/BFP/fl_env/lib/python3.8/site-packages/flwr/server/strategy/aggregate.py:38: RuntimeWarning: invalid value encountered in true_divide
+  reduce(np.add, layer_updates) / num_examples_total
+DEBUG flower 2021-11-08 11:20:41,119 | server.py:201 | evaluate_round: strategy sampled 2 clients (out of 2)
+DEBUG flower 2021-11-08 11:20:43,629 | server.py:210 | evaluate_round received 0 results and 2 failures
+WARNING flower 2021-11-08 11:20:43,632 | server.py:226 | 
+DEPRECATION WARNING: The configured Strategy uses a deprecated aggregate_evaluate
+return format:
+
+    Strategy.aggregate_evaluate(...) -> Optional[float]
+
+This format is deprecated and will be removed in a future release. It should use
+
+    Strategy.aggregate_evaluate(...) -> Tuple[Optional[float], Dict[str, Scalar]]
+
+instead.
+
+E1108 11:54:31.570645802  156292 http_server_filter.cc:303]  GET request without QUERY
+E1108 11:54:32.332916468  156292 http_server_filter.cc:303]  GET request without QUERY

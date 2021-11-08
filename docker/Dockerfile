@@ -27,8 +27,8 @@ RUN apt-get install ffmpeg libsm6 libxext6 -y
 RUN mkdir /BFP/dataset
 ENV PYTHONPATH "${PYTHONPATH}:/BFP"
 
+WORKDIR "/BFP/src"
 #RUN python3 client.py
-
-#CMD [ "client.py --csv_path --dataset_path" ]
+CMD [ "python3", "client.py" ]
 #ENTRYPOINT [ "python3" ]
 
