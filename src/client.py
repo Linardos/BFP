@@ -154,4 +154,4 @@ class ClassificationClient(fl.client.NumPyClient):
 
 #fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
 # fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
-fl.client.start_numpy_client(server, client=ClassificationClient())
+fl.client.start_numpy_client(SERVER, client=ClassificationClient())
