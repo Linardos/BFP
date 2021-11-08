@@ -40,18 +40,10 @@ if CONFIG['name']=='sanity_check':
     print("Initiating SANITY CHECK.")
     sanity_check = True
     
-# Cropped scans GPU Server
-# csv_path=CONFIG['paths']['csv_path']
-# dataset_path=CONFIG['paths']['datapath'] 
-cropped_to_breast = True
-fit_to_breast = True
-
-detection = False
 pathologies = ['mass'] #['mass', 'calcifications', 'suspicious_calcifications', 'architectural_distortion'] # None to select all
 # Resize images keeping aspect ratio
 rescale_height = 224
 rescale_width = 224
-plot_images = False
 
 image_ctr = 0
 
@@ -81,7 +73,7 @@ def preprocess_one_image_OPTIMAM(image):
 class ALLDataset(): # Should work for any center
     def __init__(self, dataset_path, csv_path, mode='train', load_max=1000, center=None): 
         subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
-                            cropped_to_breast=cropped_to_breast) # we should be able to load any dataset with this
+                            cropped_to_breast=True) # we should be able to load any dataset with this
         
         subjects_selected = {}
         if center!=None:

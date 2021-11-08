@@ -33,6 +33,7 @@ with open(config_file) as file:
 
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
+SERVER_IP=os.environ['server_ip']
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
 
@@ -108,12 +109,14 @@ def test(net, validation_loader, criterion):
             cumulative_loss += criterion(outputs, labels).item()
             predicted = probabilities_to_labels(outputs.data)
             total += labels.size(0)
+            print(f"Total is {total}")
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
+    import pdb; pdb.set_trace()
     accuracy = correct / total
     loss = cumulative_loss / total
     print(accuracy)
-    test_results = (loss, accuracy) #, predictions)
+    test_results = (loss, accuracy, bytes(predictions))
     return test_results
 
 # Load model and data
@@ -145,9 +148,10 @@ class ClassificationClient(fl.client.NumPyClient):
         loss, accuracy_aggregated = test_results
         test_results = {
             "accuracy":float(accuracy_aggregated),
-            # "predictions":predictions
+            "predictions":predictions
         }
         return float(loss), len(validation_loader), test_results 
 
 #fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+# fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+fl.client.start_numpy_client(SERVER_IP, client=ClassificationClient())

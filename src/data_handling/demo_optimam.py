@@ -19,7 +19,7 @@ if __name__ == '__main__':
     cropped_to_breast = True
     
     detection = False
-    load_max = -1 #10 Only loads 10 images
+    load_max = 100 #10 Only loads 10 images
     pathologies = None #['mass', 'calcifications', 'suspicious_calcifications', 'architectural_distortion'] # None to select all
     status = ['Normal', 'Benign', 'Malignant'] #['Normal'] 
     # Resize images keeping aspect ratio
@@ -31,6 +31,10 @@ if __name__ == '__main__':
     optimam_clients = OPTIMAMDataset(info_csv, dataset_path,detection=detection, load_max=load_max, 
                             cropped_to_breast=cropped_to_breast)
     
+    for status in ['Normal', 'Benign', 'Malignant']:
+        clients_selected = optimam_clients.get_clients_by_status(status)
+        print(f'Total clients selected by status ({status}): {len(clients_selected)}')
+
     # If you want to select images by center:
     clients_selected = optimam_clients.get_images_by_site('stge')
     print(f'Total clients selected: {len(clients_selected)}')

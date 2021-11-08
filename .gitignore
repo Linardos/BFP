@@ -1,4 +1,5 @@
 fl_env/*
+copy_lidia
 *.pkl
 *checkpoint*
 cifar-10*

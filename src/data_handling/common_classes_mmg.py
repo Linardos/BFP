@@ -329,7 +329,7 @@ class ClientMMG(ABC):
     def total_images(self, pathologies=None, status=None):
         counter = 0
         for study in self.studies:
-            counter += study.total_images(pathologies, status)
+            counter += study.total_images(pathologies=pathologies, status=status)
         return counter
     
     def total_annotations(self, pathologies=None):
@@ -444,7 +444,7 @@ class DatasetMMG(ABC):
     def get_clients_by_status(self, status):
         clients = []
         for client in self.clients:
-            images = client.total_images(status)
+            images = client.total_images(status=status)
             if images > 0:
                 clients.append(client)
         return clients

@@ -29,9 +29,12 @@ RUN apt-get install ffmpeg libsm6 libxext6 -y
 
 RUN mkdir /BFP/dataset
 ENV PYTHONPATH "${PYTHONPATH}:/BFP"
+#Not sure if this will work. But after learning environment variables it seemed more convenient to have config.yaml as one as well:
+ENV CONFIG_FILE="/BFP/src/config.yaml" 
 
 
-#RUN python3 client.py
+
+# RUN python3 client.py
 
 #CMD [ "client.py --csv_path --dataset_path" ]
 #ENTRYPOINT [ "python3" ]

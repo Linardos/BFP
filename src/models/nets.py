@@ -6,11 +6,11 @@ import torch
 import torchvision
 from torch import nn
 import torch.nn.functional as F
-cpath = Path().absolute().joinpath('config.yaml')
-print(cpath)
-config_file = Path(cpath)
-with open(config_file) as file:
-  config = yaml.safe_load(file)
+# cpath = Path().absolute().joinpath('config.yaml')
+# print(cpath)
+# config_file = Path(cpath)
+# with open(config_file) as file:
+#   config = yaml.safe_load(file)
 
 class ResNet18Classifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, linear_ch, seed=None, early_layers_learning_rate=0):

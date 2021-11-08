@@ -134,7 +134,8 @@ class OPTIMAMImage(ImageMMG):
                     else:
                         continue
                     category_id = category_id_dict[pathology_selected]
-                xmin, xmax, ymin, ymax = annotation.get_xmin_xmax_ymin_ymax(fit_to_breast)
+                bbox_anno = annotation.get_bbox(fit_to_breast)
+                xmin, xmax, ymin, ymax = bbox_anno.xmin, bbox_anno.xmax, bbox_anno.ymin, bbox_anno.ymax
                 #poly = [xmin, ymin],[xmax, ymin],[xmax, ymax],[xmin, ymax]
                 annot_elem = dict(
                     image_id=image_id,
@@ -214,7 +215,8 @@ class OPTIMAMImage(ImageMMG):
                     else:
                         continue
                     category_id = category_id_dict[pathology_selected]
-                xmin, xmax, ymin, ymax = annotation.get_xmin_xmax_ymin_ymax(fit_to_breast)
+                bbox_anno = annotation.get_bbox(fit_to_breast)
+                xmin, xmax, ymin, ymax = bbox_anno.xmin, bbox_anno.xmax, bbox_anno.ymin, bbox_anno.ymax
                 # Rescale the bboxes
                 xmin, xmax = int(xmin * w_scale), int(xmax * w_scale)
                 ymin, ymax = int(ymin * h_scale), int(ymax * h_scale)
@@ -314,7 +316,7 @@ class OPTIMAMDataset(DatasetMMG):
                 elif view in EXTRA_VIEWS_OPTIMAM:
                     new_image.view = view
                 else:
-                    # print(f'Error: view {view} not found in list -> Discard image')
+                    #print(f'Error: view {view} not found in list -> Discard image')
                     valid_view =  False
                 if not valid_view:
                     continue
@@ -424,7 +426,8 @@ class INBreastImage(ImageMMG):
                     else:
                         continue
                     category_id = category_id_dict[pathology_selected]
-                xmin, xmax, ymin, ymax = annotation.get_xmin_xmax_ymin_ymax()
+                bbox_anno = annotation.get_bbox()
+                xmin, xmax, ymin, ymax = bbox_anno.xmin, bbox_anno.xmax, bbox_anno.ymin, bbox_anno.ymax
                 #poly = [xmin, ymin],[xmax, ymin],[xmax, ymax],[xmin, ymax]
                 annot_elem = dict(
                     image_id=image_id,
@@ -515,7 +518,7 @@ class INBreastDataset(DatasetMMG):
                 elif view in MLO_VIEWS_INBREAST:
                     new_image.view = 'MLO'
                 else:
-                    # print(f'Error: view {view} not found in list -> Discard image')
+                    #print(f'Error: view {view} not found in list -> Discard image')
                     valid_view =  False
                 if not valid_view:
                     continue
@@ -666,7 +669,8 @@ class BCDRImage(ImageMMG):
                     else:
                         continue
                     category_id = category_id_dict[pathology_selected]
-                xmin, xmax, ymin, ymax = annotation.get_xmin_xmax_ymin_ymax()
+                bbox_anno = annotation.get_bbox()
+                xmin, xmax, ymin, ymax = bbox_anno.xmin, bbox_anno.xmax, bbox_anno.ymin, bbox_anno.ymax
                 #poly = [xmin, ymin],[xmax, ymin],[xmax, ymax],[xmin, ymax]
                 annot_elem = dict(
                     image_id=image_id,
@@ -772,7 +776,7 @@ class BCDRDataset(DatasetMMG):
                             elif view in MLO_VIEWS_BCDR:
                                 new_image.view = 'MLO'
                             else:
-                                # print(f'Error: view {view} not found in list -> Discard image')
+                                #print(f'Error: view {view} not found in list -> Discard image')
                                 valid_view =  False
                             if not valid_view:
                                 continue
