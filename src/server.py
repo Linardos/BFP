@@ -6,7 +6,7 @@ import pickle
 import yaml
 import os
 
-# HOME_PATH = Path.home()
+HOME_PATH = Path.home()
 config_file = Path('config.yaml')
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
@@ -14,7 +14,9 @@ with open(config_file) as file:
 
 log_dict = {'accuracies_aggregated': [],
             'local_loss': []}
-PATH_TO_LOG = Path(CONFIG['paths']['logs'])
+PATH_TO_LOG = HOME_PATH / Path(CONFIG['paths']['logs']) # Without Docker
+# PATH_TO_LOG = Path("/") / Path(CONFIG['paths']['logs']) # With Docker
+
 if not os.path.exists(PATH_TO_LOG):
     os.mkdir(PATH_TO_LOG)
 with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
@@ -70,11 +72,11 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
         accuracy_aggregated = sum(accuracies) / sum(examples)
         print(f"Round {rnd} accuracy aggregated from client results: {accuracy_aggregated}")
         
-        with open(Path(CONFIG['paths']['logs']) / 'log.pkl', 'rb') as handle:
+        with open(PATH_TO_LOG / 'log.pkl', 'rb') as handle:
             log_dict = pickle.load(handle)
         log_dict['accuracies_aggregated'].append(accuracy_aggregated)
         
-        with open(Path(CONFIG['paths']['logs']) / "log.pkl", 'wb') as handle:
+        with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Call aggregate_evaluate from base class (FedAvg)
