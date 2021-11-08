@@ -43,6 +43,6 @@ paths:
     csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
     dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
     # Used by server:
-    logs: /BFP/src/logs
+    logs: BFP/src/logs
     experiments: BFP/experiments
     misc: /experiment/misc
