@@ -16,7 +16,7 @@
 #### Option 2: Building image
 ```bash
 git clone https://github.com/Linardos/BFP.git
-cd docker
+cd BFP/docker
 docker build -t bfp_docker .
 ```
  
