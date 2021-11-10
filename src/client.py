@@ -112,7 +112,7 @@ def test(net, validation_loader, criterion):
             print(f"Total is {total}")
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     accuracy = correct / total
     loss = cumulative_loss / total
     print(accuracy)
