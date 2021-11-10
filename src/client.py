@@ -33,9 +33,12 @@ with open(config_file) as file:
 
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
-#SERVER=os.environ['server']
-SERVER= os.getenv('server',"84.88.186.195:8080")
 
+# SERVER=os.environ['server']
+# SERVER = "161.116.4.137:8080" # server without docker at BCN-AIM cluster
+# SERVER= os.getenv('server',"[::]:8080")
+SERVER= os.getenv('server',"161.116.4.137:8080")
+# Docker ip is: 172.17.0.3
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
 
@@ -52,9 +55,9 @@ CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train'), batch_size=CONFIG['hyperparameters']['batch_size'])
-    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val'), batch_size=CONFIG['hyperparameters']['batch_size'])
-    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test'), batch_size=CONFIG['hyperparameters']['batch_size'])
+    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train', load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val', load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test',  load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     return training_loader, validation_loader #test_loader
 
 # def load_data():
@@ -114,11 +117,12 @@ def test(net, validation_loader, criterion):
             print(f"Total is {total}")
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
-    # import pdb; pdb.set_trace()
     accuracy = correct / total
     loss = cumulative_loss / total
     print(accuracy)
-    test_results = (loss, accuracy, bytes(predictions))
+    # import pdb; pdb.set_trace()
+    # test_results = (loss, accuracy, bytes(predictions))
+    test_results = (loss, accuracy)
     return test_results
 
 # Load model and data
@@ -150,10 +154,14 @@ class ClassificationClient(fl.client.NumPyClient):
         loss, accuracy_aggregated = test_results
         test_results = {
             "accuracy":float(accuracy_aggregated),
-            "predictions":predictions
+            "loss":float(loss)
+            # "predictions":predictions
         }
         return float(loss), len(validation_loader), test_results 
 
-#fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
+# fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
+# fl.client.start_numpy_client("161.116.4.137", client=ClassificationClient())
 #fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())
+
+# docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images bfp_docker

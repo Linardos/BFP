@@ -1,5 +1,6 @@
 seed: [0] #[1,2,3,4]
 device: 'cpu'
+num_rounds: 3
 name: 'sanity_check' # use 4digit name tag to overwrite experiment with same parameters
 # test_unseen: False # this will turn off train mode and test on a specified center
 hyperparameters:
@@ -34,6 +35,7 @@ center: # Ignore this
 data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     labels: [0,1]
+    load_max: 50
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:
