@@ -12,6 +12,9 @@
 ## Installation
 
 #### Option 1: Pulling image from dockerhub
+```bash
+docker pull registry.gitlab.bsc.es/eucanimage/fl_breast_mg_classification
+```
 
 #### Option 2: Building image
 ```bash

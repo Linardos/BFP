@@ -33,7 +33,9 @@ with open(config_file) as file:
 
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
-SERVER_IP=os.environ['server_ip']
+#SERVER=os.environ['server']
+SERVER= os.getenv('server',"84.88.186.195:8080")
+
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
 
@@ -153,5 +155,5 @@ class ClassificationClient(fl.client.NumPyClient):
         return float(loss), len(validation_loader), test_results 
 
 #fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-# fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
-fl.client.start_numpy_client(SERVER_IP, client=ClassificationClient())
+#fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+fl.client.start_numpy_client(SERVER, client=ClassificationClient())
