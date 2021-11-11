@@ -104,7 +104,7 @@ def test(net, validation_loader, criterion):
             cumulative_loss += criterion(outputs, labels).item()
             predicted = probabilities_to_labels(outputs.data)
             total += labels.size(0)
-            print(f"Total is {total}")
+            # print(f"Total is {total}")
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
     accuracy = correct / total
@@ -154,7 +154,4 @@ class ClassificationClient(fl.client.NumPyClient):
 #fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())
 
-# cd BFP, then:
-# docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/$IMAGES_FOLDER -e data_loader_type=$DATA_LOADER_TYPE -e server=161.116.4.137:8080 bfp_docker
-# or just:
-# docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images -e data_loader_type=optimam -e server=161.116.4.137:8080 bfp_docker
+# docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images bfp_docker
