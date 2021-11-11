@@ -47,7 +47,10 @@ rescale_width = 224
 
 image_ctr = 0
 
-def preprocess_one_image_OPTIMAM(image):
+# Handle DICOMs:
+# "/home/kaisar/Datasets/InBreast/AllDICOMs"
+
+def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     label = np.single(0) if image.status=='Benign' else np.single(1)
     # status = image.status # ['Benign', 'Malignant', 'Interval Cancer', 'Normal']
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
@@ -71,9 +74,25 @@ def preprocess_one_image_OPTIMAM(image):
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
-    def __init__(self, dataset_path, csv_path, mode='train', load_max=1000, center=None): 
-        subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
-                            cropped_to_breast=True) # we should be able to load any dataset with this
+    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=1000, center=None): 
+        if data_loader_type == 'optimam':
+            subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+                                cropped_to_breast=True) # we should be able to load any dataset with this
+        elif data_loader_type == 'bcdr':
+            # root path is '/home/lidia/Datasets/BCDR/cropped/ in both cases
+            csv_path = [Path(csv_path)/'BCDR-D01_dataset/dataset_info.csv',
+                        Path(csv_path)/'BCDR-D02_dataset/dataset_info.csv',
+                        Path(csv_path)/'BCDR-DN01_dataset/dataset_info.csv']
+            dataset_path = [Path(dataset_path)/'BCDR-D01_dataset',
+                            Path(dataset_path)/'BCDR-D02_dataset',
+                            Path(dataset_path)/'BCDR-DN01_dataset']
+            subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+                                cropped_to_breast=True)
+        elif data_loader_type == 'inbreast':
+            # csv_path = '/home/lidia/Datasets/InBreast/INbreast_updated_cropped_breast.csv'
+            # dataset_path = '/home/lidia/Datasets/InBreast/AllPNG_cropped'
+            subjects = INBreastDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+                                cropped_to_breast=True)
         
         subjects_selected = {}
         if center!=None:

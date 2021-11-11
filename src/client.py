@@ -37,7 +37,8 @@ DATASET_PATH = os.environ['dataset_path']
 # SERVER=os.environ['server']
 # SERVER = "161.116.4.137:8080" # server without docker at BCN-AIM cluster
 # SERVER= os.getenv('server',"[::]:8080")
-SERVER= os.getenv('server',"161.116.4.137:8080")
+SERVER= os.getenv('server',"161.116.4.137:8080") 
+DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
 # Docker ip is: 172.17.0.3
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
@@ -55,21 +56,10 @@ CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 def load_data():
     """Load Breast Cancer training and validation set."""
     print('Loading data...')
-    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'train', load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
-    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'val', load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
-    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, 'test',  load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='train', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='val', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='test', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     return training_loader, validation_loader #test_loader
-
-# def load_data():
-#     """Load CIFAR-10 (training and test set)."""
-#     transform = transforms.Compose(
-#     [transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
-#     )
-#     trainset = CIFAR10(".", train=True, download=True, transform=transform)
-#     testset = CIFAR10(".", train=False, download=True, transform=transform)
-#     trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-#     testloader = DataLoader(testset, batch_size=32)
-#     return trainloader, testloader
 
 def train(net, training_loader, epochs, criterion):
     """Train the network on the training set."""
