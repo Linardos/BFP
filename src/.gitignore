@@ -1,2 +1,3 @@
 fl_env/*
+*.npz
 run_interactive.sh

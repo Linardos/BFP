@@ -39,8 +39,8 @@ data:
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:
-    # landmarks: /home/akis-linardos/BFP/src/preprocessing/optimam_train_hologic_landmarks.pth # out of docker
-    landmarks: /BFP/src/preprocessing/optimam_train_hologic_landmarks.pth # in docker
+    landmarks: /home/akis-linardos/BFP/src/preprocessing/optimam_train_hologic_landmarks.pth # out of docker
+    # landmarks: /BFP/src/preprocessing/optimam_train_hologic_landmarks.pth # in docker
     # ub_logs: workenv/BFP/src/visualizations # Ignore this
     # These are paths we should be given from the partners. The docker should mount them:
     csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv

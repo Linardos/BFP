@@ -79,7 +79,7 @@ class ALLDataset(): # Should work for any center
             subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
                                 cropped_to_breast=True) # we should be able to load any dataset with this
         elif data_loader_type == 'bcdr':
-            # root path is '/home/lidia/Datasets/BCDR/cropped/ in both cases
+            # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
             csv_path = [Path(csv_path)/'BCDR-D01_dataset/dataset_info.csv',
                         Path(csv_path)/'BCDR-D02_dataset/dataset_info.csv',
                         Path(csv_path)/'BCDR-DN01_dataset/dataset_info.csv']
@@ -89,8 +89,8 @@ class ALLDataset(): # Should work for any center
             subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=-1, 
                                 cropped_to_breast=True)
         elif data_loader_type == 'inbreast':
-            # csv_path = '/home/lidia/Datasets/InBreast/INbreast_updated_cropped_breast.csv'
-            # dataset_path = '/home/lidia/Datasets/InBreast/AllPNG_cropped'
+            # csv_path = '/home/lidia-garrucho/datasets/INBREAST/INbreast_updated_cropped_breast.csv'
+            # dataset_path = '/home/lidia-garrucho/datasets/INBREAST/AllPNG_cropped'
             subjects = INBreastDataset(csv_path, dataset_path, detection=False, load_max=-1, 
                                 cropped_to_breast=True)
         

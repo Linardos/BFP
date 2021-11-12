@@ -1,4 +1,6 @@
 fl_env/*
+*.npz
+server_docker
 copy_lidia
 *.pkl
 *checkpoint*
