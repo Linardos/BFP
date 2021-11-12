@@ -27,7 +27,7 @@ RUN apt-get install ffmpeg libsm6 libxext6 -y
 
 RUN mkdir /BFP/dataset
 ENV PYTHONPATH "${PYTHONPATH}:/BFP"
-#ENV landmarks "/BFP/src/preprocessing/optimam_train_hologic_landmarks.pth"
+ENV landmarks "/BFP/src/preprocessing/optimam_train_hologic_landmarks.pth"
 
 WORKDIR "/BFP/src"
 #RUN python3 client.py
