@@ -6,7 +6,7 @@ name: 'sanity_check' # use 4digit name tag to overwrite experiment with same par
 hyperparameters:
     num_epochs : 20
     iteration_number: 8 # this will define the number of batches when doing federated (we want the same number of iterations)
-    batch_size : 32  # if 0, it will adapt to center
+    batch_size : 4  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
     lr : 0.01
     early_stop_counter: 20 # number of iterations after performance stagnation before stopping
