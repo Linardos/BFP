@@ -50,7 +50,7 @@ print(f'Here csv path {CSV_PATH}')
 
 # args = parser.parse_args()
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda") #if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
 def load_data():
