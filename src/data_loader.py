@@ -47,6 +47,8 @@ rescale_width = 224
 
 image_ctr = 0
 
+LANDMARKS = os.environ['landmarks']# CONFIG['paths']['landmarks']
+
 # Handle DICOMs:
 # "/home/kaisar/Datasets/InBreast/AllDICOMs"
 
@@ -65,7 +67,7 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     image = torch.from_numpy(rescaled_img).permute(2,0,1)
     
     # Histogram Matching 
-    landmarks_values = torch.load(HOME_PATH / CONFIG['paths']['landmarks'])
+    landmarks_values = torch.load(HOME_PATH / LANDMARKS)
     apply_hist_stand_landmarks(image, landmarks_values)
 
     paddedimg = torch.zeros(3,224,224)

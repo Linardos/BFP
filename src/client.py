@@ -39,6 +39,7 @@ DATASET_PATH = os.environ['dataset_path']
 # SERVER= os.getenv('server',"[::]:8080")
 SERVER= os.getenv('server',"161.116.4.137:8080") 
 DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
+
 # Docker ip is: 172.17.0.3
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
@@ -50,7 +51,7 @@ print(f'Here csv path {CSV_PATH}')
 
 # args = parser.parse_args()
 
-DEVICE = torch.device("cuda") #if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
 def load_data():
