@@ -22,6 +22,7 @@ RUN pwd
 COPY . /BFP/docker
 RUN pip install -r requirements.txt
 RUN pip3 install torch==1.10.0+cu113 torchvision==0.11.1+cu113 torchaudio===0.10.0+cu113 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6 -y
 
 RUN mkdir /BFP/dataset
