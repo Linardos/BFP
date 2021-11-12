@@ -56,7 +56,7 @@ docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/
 
 BCDR:
 ```bash
-DATA_PATH=/home/lidia/Datasets/BCDR/cropped/
+DATA_PATH=/home/lidia-garrucho/datasets/BCDR/cropped/
 CSV_FILENAME=None
 DATA_LOADER_TYPE=bcdr
 
