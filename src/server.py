@@ -13,7 +13,7 @@ with open(config_file) as file:
 
 
 log_dict = {'accuracies_aggregated': [],
-            'local_loss': []}
+            'total_val_loss': []}
 PATH_TO_LOG = HOME_PATH / Path(CONFIG['paths']['logs']) # Without Docker
 # PATH_TO_LOG = Path("/") / Path(CONFIG['paths']['logs']) # With Docker
 
@@ -37,7 +37,7 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
         with open(PATH_TO_LOG / 'log.pkl', 'rb') as handle:
             log_dict = pickle.load(handle)
         print(log_dict)
-        log_dict['local_loss'].append(losses)
+        log_dict['total_val_loss'].append(losses)
         with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -86,4 +86,4 @@ strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
 )
 
-fl.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": CONFIG['num_rounds']})
+fl.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})

@@ -33,6 +33,16 @@ with open(config_file) as file:
 
 CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
+# Before running each client locally, you need to set the environment variable client_log_path to a unique value for each worker.
+
+### IMPORTANT!!! When running out of docker:
+# export client_log_path=/home/akis-linardos/BFP/src/client_logs/c1
+LOG_PATH = Path(os.environ['client_log_path']) # This is to store client results
+os.makedirs(LOG_PATH, exist_ok=True)
+
+log_dict = {'local_loss':{0:[]}, 'local_accuracy':[], 'local_val_loss':{0:[]}, 'local_test_accuracy':[], 'local_test_predictions':[]}
+with open(LOG_PATH / "log.pkl", 'wb') as handle:
+    pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # SERVER=os.environ['server']
 # SERVER = "161.116.4.137:8080" # server without docker at BCN-AIM cluster
@@ -43,13 +53,6 @@ DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loa
 # Docker ip is: 172.17.0.3
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
-
-# parser = argparse.ArgumentParser(description='Process some integers.')
-# # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
-# # parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
-# parser.add_argument('--center', help='use only when you have multi-center data', default=None)
-
-# args = parser.parse_args()
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
@@ -62,14 +65,19 @@ def load_data():
     test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='test', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     return training_loader, validation_loader #test_loader
 
-def train(net, training_loader, epochs, criterion):
+def train(net, training_loader, criterion):
     """Train the network on the training set."""
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     losses = []
     cumulative_loss = 0.0
     predictions = []
     print('Training...')
-    for _ in range(epochs):
+    with open(LOG_PATH / 'log.pkl', 'rb') as handle:
+        log_dict = pickle.load(handle)
+    current_round_num=list(log_dict['local_loss'].keys())[-1]
+    next_round_num=current_round_num+1
+    log_dict['local_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
+    for _ in range(CONFIG['hyperparameters']['epochs_per_round']):
         for i, batch in enumerate(tqdm(training_loader)):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             optimizer.zero_grad()
@@ -78,8 +86,10 @@ def train(net, training_loader, epochs, criterion):
             loss.backward()
             optimizer.step()
 
-            losses.append(loss)
-
+            log_dict['local_loss'][current_round_num].append(loss.item())
+    print(log_dict)
+    with open(LOG_PATH / "log.pkl", 'wb') as handle:
+        pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     train_results = cumulative_loss #(losses, predictions)
     return train_results
 
@@ -98,16 +108,25 @@ def test(net, validation_loader, criterion):
     correct, total, cumulative_loss = 0, 0, 0.0
     predictions = []
     print('Validating...')
+    with open(LOG_PATH / 'log.pkl', 'rb') as handle:
+        log_dict = pickle.load(handle)
+    current_round_num=list(log_dict['local_val_loss'].keys())[-1]
+    next_round_num=current_round_num+1
+    log_dict['local_val_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
     with torch.no_grad():
         for i, batch in enumerate(tqdm(validation_loader)):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             outputs = net(images)
+            loss = criterion(outputs, labels).item()
             cumulative_loss += criterion(outputs, labels).item()
             predicted = probabilities_to_labels(outputs.data)
             total += labels.size(0)
-            print(f"Total is {total}")
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
+            log_dict['local_val_loss'][current_round_num].append(loss)
+    print(log_dict)
+    with open(LOG_PATH / "log.pkl", 'wb') as handle:
+        pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     accuracy = correct / total
     loss = cumulative_loss / total
     print(accuracy)
@@ -133,7 +152,7 @@ class ClassificationClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        results = train(net, train_loader, epochs=1, criterion=CRITERION())
+        results = train(net, train_loader, criterion=CRITERION())
         results = {
             'cumulative_loss': float(results)
         }

@@ -1,10 +1,10 @@
 seed: [0] #[1,2,3,4]
 device: 'cpu'
-num_rounds: 3
 name: 'sanity_check' # use 4digit name tag to overwrite experiment with same parameters
 # test_unseen: False # this will turn off train mode and test on a specified center
 hyperparameters:
-    num_epochs : 20
+    federated_rounds: 3
+    epochs_per_round : 30
     iteration_number: 8 # this will define the number of batches when doing federated (we want the same number of iterations)
     batch_size : 32  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
@@ -45,6 +45,6 @@ paths:
     csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
     dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
     # Used by server:
-    logs: BFP/src/logs
+    logs: BFP/src/server_logs
     experiments: BFP/experiments
     misc: /experiment/misc
