@@ -54,7 +54,18 @@ DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loa
 print(f'Here dataset path {DATASET_PATH}')
 print(f'Here csv path {CSV_PATH}')
 
+<<<<<<< HEAD
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+=======
+# parser = argparse.ArgumentParser(description='Process some integers.')
+# # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
+# # parser.add_argument('-d', '--dataset', help='path to dataset', default=CONFIG['paths']['dataset_path'])
+# parser.add_argument('--center', help='use only when you have multi-center data', default=None)
+
+# args = parser.parse_args()
+
+DEVICE = torch.device("cuda") #if torch.cuda.is_available() else "cpu")
+>>>>>>> e81c23db7ac41abb9be0bc44a5aad6d99d07c008
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
 def load_data():

@@ -48,6 +48,7 @@ rescale_width = 224
 image_ctr = 0
 
 LANDMARKS = os.environ['landmarks']# CONFIG['paths']['landmarks']
+#LANDMARKS = "BFP/src/preprocessing/optimam_train_hologic_landmarks.pth"
 
 # Handle DICOMs:
 # "/home/kaisar/Datasets/InBreast/AllDICOMs"
