@@ -48,7 +48,6 @@ rescale_width = 224
 image_ctr = 0
 
 LANDMARKS = os.environ['landmarks']# CONFIG['paths']['landmarks']
-#LANDMARKS = "BFP/src/preprocessing/optimam_train_hologic_landmarks.pth"
 
 # Handle DICOMs:
 # "/home/kaisar/Datasets/InBreast/AllDICOMs"
@@ -126,6 +125,8 @@ class ALLDataset(): # Should work for any center
             self.images = extract_images(validation_subjects) 
         elif mode == 'test':
             self.images = extract_images(test_subjects)
+
+        assert len(self.images)>0, "No images found in the dataset. Something is wrong with the input path or your dataloader choice."
 
     def __len__(self):
         return len(self.images)
