@@ -17,12 +17,11 @@ hyperparameters:
 model:
     # The model name used here will generate a new experiment in the ~/mnm/experiments
     arch:
-        function: models.nets.ResNet18Classifier
+        function: models.nets.ResNet101Classifier
         args: #keyword arguments for function
             pretrained: True
             in_ch: 3
             out_ch: 1
-            linear_ch: 512
             early_layers_learning_rate: 1e-5 #10^-5, if set to 0 early layers will be frozen 
             seed: 42 # Particularly important for federated. Models will make no sense if we aggregate from different initializations
     pretrained: # if we have our own weights
@@ -34,7 +33,7 @@ center: # Ignore this
 data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     labels: [0,1]
-    load_max: 50
+    load_max: 15
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:

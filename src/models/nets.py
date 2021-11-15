@@ -18,9 +18,8 @@ class ResNet18Classifier(nn.Sequential):
         in_ch = 1 or 3
         early_layers can be 'freeze' or 'lower_lr'
         '''
-        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True    
         super(ResNet18Classifier, self).__init__()
-        self.model = torch.hub.load('pytorch/vision:v0.6.0', 'resnet18', pretrained=True)
+        self.model = torch.hub.load('pytorch/vision:v0.6.0', 'resnet18', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
 
         if not early_layers_learning_rate: # 
@@ -42,6 +41,29 @@ class ResNet18Classifier(nn.Sequential):
             self.out = nn.Softmax(dim=1)
         super(ResNet18Classifier, self).__init__(self.model, 
                                                  self.out)
+
+class ResNet101Classifier(nn.Sequential):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
+        '''
+        in_ch = 1 or 3
+        early_layers can be 'freeze' or 'lower_lr'
+        '''
+        super(ResNet101Classifier, self).__init__()
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet101', pretrained=pretrained)
+        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.fc = nn.Linear(2048, out_ch)
+
+        if isinstance(self.model.fc, nn.Linear):
+            torch.nn.init.xavier_uniform_(self.model.fc.weight)
+            if self.model.fc.bias is not None:
+                torch.nn.init.zeros_(self.model.fc.bias)
+
+        if out_ch == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
+        super(ResNet101Classifier, self).__init__(self.model, 
+                                                 self.out)
                                                 
 class SqueezeNetClassifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, linear_ch, seed=None, early_layers_learning_rate=0):
@@ -49,7 +71,6 @@ class SqueezeNetClassifier(nn.Sequential):
         in_ch = 1 or 3
         early_layers can be 'freeze' or 'lower_lr'
         '''
-        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
         super(SqueezeNetClassifier, self).__init__()
         self.model = torch.hub.load('pytorch/vision:v0.6.0', 'squeezenet1_0', pretrained=True)
         self.model.classifier[1]=nn.Conv2d(linear_ch, out_ch, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization

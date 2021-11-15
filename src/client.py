@@ -70,6 +70,7 @@ def load_data():
     training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='train', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='val', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='test', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    print(len(training_loader))
     return training_loader, validation_loader #test_loader
 
 def train(net, training_loader, criterion):
@@ -93,7 +94,7 @@ def train(net, training_loader, criterion):
             loss.backward()
             optimizer.step()
 
-            log_dict['local_loss'][current_round_num].append(loss.item())
+        log_dict['local_loss'][current_round_num].append(loss.item())
     print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -113,7 +114,7 @@ def probabilities_to_labels(predictions : torch.Tensor) -> torch.Tensor:
 def test(net, validation_loader, criterion):
     """Validate the network on the entire test set."""
     correct, total, cumulative_loss = 0, 0, 0.0
-    predictions = []
+    predictions, val_losses = [], []
     print('Validating...')
     with open(LOG_PATH / 'log.pkl', 'rb') as handle:
         log_dict = pickle.load(handle)
@@ -130,7 +131,9 @@ def test(net, validation_loader, criterion):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             predictions.append(predicted)
-            log_dict['local_val_loss'][current_round_num].append(loss)
+            val_losses.append(loss)
+    val_loss=sum(val_losses)/len(val_losses)
+    log_dict['local_val_loss'][current_round_num]=val_loss
     print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -143,8 +146,8 @@ def test(net, validation_loader, criterion):
     return test_results
 
 # Load model and data
-# net = nets.ResNet18Classifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=False)
-net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
+net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+# net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
 net.to(DEVICE)
 train_loader, validation_loader = load_data() # Should change to sample differently every time.
 
@@ -154,7 +157,7 @@ class ClassificationClient(fl.client.NumPyClient):
 
     def set_parameters(self, parameters):
         params_dict = zip(net.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.Tensor(v) for k, v in params_dict})
+        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         net.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
