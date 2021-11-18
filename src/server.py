@@ -45,10 +45,9 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
             # Save aggregated_weights
             print(f"Saving round {rnd} aggregated_weights...")
             np.savez(f"round-{rnd}-weights.npz", *aggregated_weights) # Save as state_dict PyTorch
-        log_dict['model_weights']=aggregated_weights
+        # log_dict['model_weights']=aggregated_weights
         with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        # exit()
         return aggregated_weights
 
     def aggregate_evaluate(

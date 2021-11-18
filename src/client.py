@@ -159,17 +159,14 @@ class ClassificationClient(fl.client.NumPyClient):
         self.train_loader, self.validation_loader = load_data()
 
     def get_parameters(self):
-        print("Called get_parm")
         return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters):
-        print("Called set_param")
         params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
         self.net.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
-        print("Called fit")
         self.set_parameters(parameters)
         results = train(self.net, self.train_loader, criterion=CRITERION())
         results = {
@@ -178,7 +175,6 @@ class ClassificationClient(fl.client.NumPyClient):
         return self.get_parameters(), len(self.train_loader), results
 
     def evaluate(self, parameters, config):
-        print("Called evaluate")
         self.set_parameters(parameters)
         test_results = test(self.net, self.validation_loader, criterion=CRITERION())
         loss, accuracy_aggregated = test_results
