@@ -82,12 +82,12 @@ class ALLDataset(): # Should work for any center
                                 cropped_to_breast=True) # we should be able to load any dataset with this
         elif data_loader_type == 'bcdr':
             # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
-            csv_path = [Path(csv_path)/'BCDR-D01_dataset/dataset_info.csv',
-                        Path(csv_path)/'BCDR-D02_dataset/dataset_info.csv',
-                        Path(csv_path)/'BCDR-DN01_dataset/dataset_info.csv']
-            dataset_path = [Path(dataset_path)/'BCDR-D01_dataset',
-                            Path(dataset_path)/'BCDR-D02_dataset',
-                            Path(dataset_path)/'BCDR-DN01_dataset']
+            csv_path = [os.path.join(csv_path,'cropped/BCDR-D01_dataset/dataset_info.csv'),
+                        os.path.join(csv_path,'cropped/BCDR-D02_dataset/dataset_info.csv'),
+                        os.path.join(csv_path,'cropped/BCDR-DN01_dataset/dataset_info.csv')]
+            dataset_path = [os.path.join(dataset_path,'cropped/BCDR-D01_dataset'),
+                            os.path.join(dataset_path,'cropped/BCDR-D02_dataset'),
+                            os.path.join(dataset_path,'cropped/BCDR-DN01_dataset')]
             subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=-1, 
                                 cropped_to_breast=True)
         elif data_loader_type == 'inbreast':

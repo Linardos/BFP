@@ -38,15 +38,17 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
             log_dict = pickle.load(handle)
         print(log_dict)
         log_dict['total_val_loss'].append(losses)
-        with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
-            pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         """Aggregate model weights using weighted average and store checkpoint"""
         aggregated_weights = super().aggregate_fit(rnd, results, failures)
         if aggregated_weights is not None:
             # Save aggregated_weights
             print(f"Saving round {rnd} aggregated_weights...")
-            np.savez(f"round-{rnd}-weights.npz", *aggregated_weights)
+            np.savez(f"round-{rnd}-weights.npz", *aggregated_weights) # Save as state_dict PyTorch
+        log_dict['model_weights']=aggregated_weights
+        with open(PATH_TO_LOG / "log.pkl", 'wb') as handle:
+            pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        # exit()
         return aggregated_weights
 
     def aggregate_evaluate(

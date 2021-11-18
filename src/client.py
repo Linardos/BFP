@@ -146,42 +146,53 @@ def test(net, validation_loader, criterion):
     return test_results
 
 # Load model and data
-net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+# net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
 # net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
-net.to(DEVICE)
-train_loader, validation_loader = load_data() # Should change to sample differently every time.
+# net.to(DEVICE)
+# train_loader, validation_loader = load_data() # Should change to sample differently every time.
 
 class ClassificationClient(fl.client.NumPyClient):
+    def __init__(self):
+        super(ClassificationClient, self).__init__()
+        self.net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+        self.net.to(DEVICE)
+        self.train_loader, self.validation_loader = load_data()
+
     def get_parameters(self):
-        return [val.cpu().numpy() for _, val in net.state_dict().items()]
+        print("Called get_parm")
+        return [val.cpu().numpy() for _, val in self.net.state_dict().items()]
 
     def set_parameters(self, parameters):
-        params_dict = zip(net.state_dict().keys(), parameters)
+        print("Called set_param")
+        params_dict = zip(self.net.state_dict().keys(), parameters)
         state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-        net.load_state_dict(state_dict, strict=True)
+        self.net.load_state_dict(state_dict, strict=True)
 
     def fit(self, parameters, config):
+        print("Called fit")
         self.set_parameters(parameters)
-        results = train(net, train_loader, criterion=CRITERION())
+        results = train(self.net, self.train_loader, criterion=CRITERION())
         results = {
             'cumulative_loss': float(results)
         }
-        return self.get_parameters(), len(train_loader), results
+        return self.get_parameters(), len(self.train_loader), results
 
     def evaluate(self, parameters, config):
+        print("Called evaluate")
         self.set_parameters(parameters)
-        test_results = test(net, validation_loader, criterion=CRITERION())
+        test_results = test(self.net, self.validation_loader, criterion=CRITERION())
         loss, accuracy_aggregated = test_results
         test_results = {
             "accuracy":float(accuracy_aggregated),
             "loss":float(loss)
             # "predictions":predictions
         }
-        return float(loss), len(validation_loader), test_results 
+        return float(loss), len(self.validation_loader), test_results 
 
 # fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
 # fl.client.start_numpy_client("161.116.4.137", client=ClassificationClient())
 #fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())
 
 # cd BFP, then:

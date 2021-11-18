@@ -3,8 +3,8 @@ device: 'cpu'
 name: 'sanity_check' # use 4digit name tag to overwrite experiment with same parameters
 # test_unseen: False # this will turn off train mode and test on a specified center
 hyperparameters:
-    federated_rounds: 3
-    epochs_per_round : 30
+    federated_rounds: 40
+    epochs_per_round : 2
     iteration_number: 8 # this will define the number of batches when doing federated (we want the same number of iterations)
     batch_size : 4  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
