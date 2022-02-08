@@ -18,12 +18,13 @@ sys.path.append('/BFP')
 from math import floor, ceil
 from pathlib import Path
 from tqdm import tqdm
-
 import torch
 import torch.nn.functional as F
 from torchvision.utils import make_grid, save_image
 torch.manual_seed(seed)
 from PIL import Image
+import pydicom as dicom
+
 from src.data_augmentation.breast_density.data.resize_image import *
 from src.preprocessing.histogram_standardization import apply_hist_stand_landmarks
 from src.data_handling.mmg_detection_datasets import *
@@ -58,9 +59,12 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
     # view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
     # laterality = image.laterality # L R
-
-    img_pil = Image.open(image.path).convert('RGB')
-    img_np = np.array(img_pil)
+    if ".dcm" in image.path:
+        img_dcm = dicom.dcmread(image.path)
+        img_np = img_dcm.pixel_array()
+    else:
+        img_pil = Image.open(image.path).convert('RGB')
+        img_np = np.array(img_pil)
     scale_size = (rescale_height, rescale_width)
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')

@@ -1,30 +1,32 @@
-import flwr as fl
-import numpy as np
 from typing import List, Tuple, Optional
-from pathlib import Path
-import pickle
-import yaml
 import os
-from models import nets
 from collections import OrderedDict
-import torch
 from datetime import datetime
 import time
 import shutil
+import glob
+
+import flwr as fl
+import numpy as np
+import torch
+import pickle
+import yaml
+from pathlib import Path
+
+from models import nets
 
 HOME_PATH = Path.home()
 config_file = Path('config.yaml')
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
+DEVICE = torch.device(CONFIG['device'])
 def import_class(name):
     module_name, class_name = name.rsplit('.', 1)
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 
-log_dict = {'accuracies_aggregated': [],
-            'total_val_loss': [],
-            'time_spent': []}
+### ====== Make Experiment Folder ====== ###
 path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Without Docker
 # path_to_experiments = Path("/") / Path(CONFIG['paths']['experiments']) # With Docker
 
@@ -74,14 +76,56 @@ if not os.path.exists(PATH_TO_EXPERIMENT):
 shutil.copy(config_file, PATH_TO_EXPERIMENT)
 shutil.copy('server.py', PATH_TO_EXPERIMENT)
 shutil.copy('data_loader.py', PATH_TO_EXPERIMENT)
+#\\ ====== Make Experiment Folder ====== #\\
 
 
+### ====== Log ====== ###
+log_dict = {'accuracies_aggregated': [],
+            'total_val_loss': [],
+            'time_spent': []}
 with open(PATH_TO_EXPERIMENT / 'log.pkl', 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+#\\ ====== Log ====== #\\
 
-net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False).to(DEVICE)
 # net = import_class(CONFIG['model']['arch']['function'])
 INITIAL_TIME = time.time()
+
+### ====== Center Dropout (Under Development) ====== ###
+# class CDCriterion(fl.server.criterion.Criterion):
+#     def __init__(self, criterion, dropout_prob):
+#         super().__init__()
+#         self.criterion = criterion
+#         self.dropout_prob = dropout_prob
+
+#     def select():
+        
+
+# class CenterDropoutClientManager(fl.server.client_manager.SimpleClientManager):
+#     def sample(
+#         self,
+#         num_clients: int,
+#         min_num_clients: Optional[int] = None,
+#         criterion: Optional[Criterion] = None,
+#     ) -> List[ClientProxy]:
+#         """Apply Center Dropout."""
+
+#         # Block until at least num_clients are connected.
+#         if min_num_clients is None:
+#             min_num_clients = num_clients
+#         self.wait_for(min_num_clients)
+#         # Sample clients which meet the criterion
+#         available_cids = list(self.clients)
+#         if criterion is not None:
+#             available_cids = [
+#                 cid for cid in available_cids if criterion.select(self.clients[cid])
+#             ]
+#         sampled_cids = random.sample(available_cids, num_clients)
+#         return [self.clients[cid] for cid in sampled_cids]
+#\\ ====== Center Dropout (Under Development) ====== #\\
+
+
+### ====== Strategy for Checkpointing and Metrics ====== ###
 class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
     #
     def aggregate_fit(
@@ -91,28 +135,36 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
         failures: List[BaseException],
     ) -> Optional[fl.common.Weights]:
 
-        # print([r.metrics.keys() for _, r in results])
         losses = [r.metrics["cumulative_loss"] for _, r in results]
         print(f"Length results is {len(losses)}")
+
+        # Store metrics into log_dict
         with open(PATH_TO_EXPERIMENT / 'log.pkl', 'rb') as handle:
             log_dict = pickle.load(handle)
         print(log_dict)
         log_dict['total_val_loss'].append(losses)
         log_dict['time_spent'].append(time.time() - INITIAL_TIME)
-
-        """Aggregate model weights using weighted average and store checkpoint"""
-        aggregated_weights = super().aggregate_fit(rnd, results, failures)
-        if aggregated_weights is not None:
-            print(f"Saving round {rnd} aggregated_weights...")
-            # params_dict = zip(net.state_dict().keys(), aggregated_weights)
-            # state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-            # torch.save(state_dict, f"round-{rnd}-weights.pt")
-            # Save aggregated_weights
-            np.savez(f"round-{rnd}-weights.npz", *aggregated_weights) # How to save as state_dict PyTorch
-        # log_dict['model_weights']=aggregated_weights
+        
         with open(PATH_TO_EXPERIMENT / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        return aggregated_weights
+
+        """Aggregate model weights using weighted average and store checkpoint"""
+        aggregated_parameters_tuple = super().aggregate_fit(rnd, results, failures)
+        aggregated_parameters, _ = aggregated_parameters_tuple
+        # log_dict['aggregated_parameters']=aggregated_parameters
+        
+        if aggregated_parameters is not None:
+            print(f"Saving round {rnd} aggregated_parameters...")
+            # Convert `Parameters` to `List[np.ndarray]`
+            aggregated_weights: List[np.ndarray] = fl.common.parameters_to_weights(aggregated_parameters)
+            
+            # Convert `List[np.ndarray]` to PyTorch`state_dict`
+            params_dict = zip(net.state_dict().keys(), aggregated_weights)
+            state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+            net.load_state_dict(state_dict, strict=True)
+            torch.save(net.state_dict(), PATH_TO_EXPERIMENT / f"model_round_{rnd}.pth")
+            
+        return aggregated_parameters_tuple 
 
     def aggregate_evaluate(
         self,
@@ -146,9 +198,27 @@ class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
 
         # Call aggregate_evaluate from base class (FedAvg)
         return super().aggregate_evaluate(rnd, results, failures)
-# Create strategy and run server
+#\\ ====== Strategy for Checkpointing and Metrics ====== #\\
+
+### ====== Load previous Checkpoint (Under Development) ====== ###
+def load_parameters_from_disk():
+    # import Net
+    list_of_files = [fname for fname in glob.glob(CONFIG['paths']['continue_from_checkpoint'])]
+    latest_round_file = max(list_of_files, key=os.path.getctime)
+    parameters = np.load(latest_round_file)
+    params_dict = zip(net.state_dict().keys(), parameters)
+    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+    net.load_state_dict(state_dict, strict=True)
+#\\ ====== Load previous Checkpoint (Under Development) ====== #\\
+
+### ====== Define strategy and initiate server ====== ###
 strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
+    min_available_clients = CONFIG['strategy']['min_available_clients'],
+    min_fit_clients = CONFIG['strategy']['min_fit_clients'],
+    min_eval_clients = CONFIG['strategy']['min_eval_clients'],
+    fraction_fit = CONFIG['strategy']['CD_P'],
+    # initial_parameters=load_parameters_from_disk() if CONFIG['paths']['continue_from_checkpoint'] else None
 )
-
 fl.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})
+#\\ ====== Define strategy and initiate server ====== #\\

@@ -8,6 +8,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 # from torchvision.datasets import CIFAR10
 import flwr as fl
+from datetime import datetime
 import importlib
 import os
 
@@ -35,8 +36,8 @@ CSV_PATH = os.environ['csv_path']
 DATASET_PATH = os.environ['dataset_path']
 # Before running each client locally, you need to set the environment variable client_log_path to a unique value for each worker.
 
-### IMPORTANT!!! When running out of docker:
-# export client_log_path=/home/akis-linardos/BFP/src/client_logs/c1
+### IMPORTANT!!! When running out of docker, run this on terminal first:
+# export client_log_path=/home/akis-linardos/BFP/src/client_logs/c1 <- should be unique for each worker (c1, c2, etc)
 LOG_PATH = Path(os.environ['client_log_path']) # This is to store client results
 os.makedirs(LOG_PATH, exist_ok=True)
 
@@ -61,7 +62,7 @@ print(f'Here csv path {CSV_PATH}')
 
 # args = parser.parse_args()
 
-DEVICE = torch.device("cuda") #if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device(CONFIG['device']) #if torch.cuda.is_available() else "cpu")
 CRITERION = import_class(CONFIG['hyperparameters']['criterion'])
 
 def load_data():
@@ -144,12 +145,6 @@ def test(net, validation_loader, criterion):
     # test_results = (loss, accuracy, bytes(predictions))
     test_results = (loss, accuracy)
     return test_results
-
-# Load model and data
-# net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
-# net = nets.SqueezeNetClassifier(in_ch=3, out_ch=1, linear_ch=512, pretrained=True)
-# net.to(DEVICE)
-# train_loader, validation_loader = load_data() # Should change to sample differently every time.
 
 class ClassificationClient(fl.client.NumPyClient):
     def __init__(self):

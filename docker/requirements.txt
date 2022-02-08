@@ -13,3 +13,4 @@ scipy
 SimpleITK
 scikit-image
 tqdm==4.62.3
+pydicom
