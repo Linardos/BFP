@@ -64,7 +64,54 @@ class ResNet101Classifier(nn.Sequential):
             self.out = nn.Softmax(dim=1)
         super(ResNet101Classifier, self).__init__(self.model, 
                                                  self.out)
-                                                
+
+class DenseNet121Classifier(nn.Sequential):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
+        '''
+        in_ch = 1 or 3
+        early_layers can be 'freeze' or 'lower_lr'
+        '''
+        super(DenseNet121Classifier, self).__init__()
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'densenet121', pretrained=pretrained)
+        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.fc = nn.Linear(2048, out_ch) # should adjust this
+
+        if isinstance(self.model.fc, nn.Linear):
+            torch.nn.init.xavier_uniform_(self.model.fc.weight)
+            if self.model.fc.bias is not None:
+                torch.nn.init.zeros_(self.model.fc.bias)
+
+        if out_ch == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
+        super(DenseNet121Classifier, self).__init__(self.model, 
+                                                 self.out)
+
+
+class AlexNetClassifier(nn.Sequential):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
+        '''
+        in_ch = 1 or 3
+        early_layers can be 'freeze' or 'lower_lr'
+        '''
+        super(AlexNetClassifier, self).__init__()
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
+        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.fc = nn.Linear(2048, out_ch) # should adjust this
+
+        if isinstance(self.model.fc, nn.Linear):
+            torch.nn.init.xavier_uniform_(self.model.fc.weight)
+            if self.model.fc.bias is not None:
+                torch.nn.init.zeros_(self.model.fc.bias)
+
+        if out_ch == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
+        super(AlexNetClassifier, self).__init__(self.model, 
+                                                 self.out)
+
 class SqueezeNetClassifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, linear_ch, seed=None, early_layers_learning_rate=0):
         '''

@@ -54,12 +54,17 @@ LANDMARKS = os.environ['landmarks']# CONFIG['paths']['landmarks']
 # "/home/kaisar/Datasets/InBreast/AllDICOMs"
 
 def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
-    label = np.single(0) if image.status=='Benign' else np.single(1)
+    if image.status=='Malignant' or image.status=='Interval Cancer':
+        label = np.single(1)
+    elif image.status=='Benign' or image.status=='Normal':
+        label = np.single(0)
+    # label = np.single(1) if image.status=='Malignant' else np.single(0)
     # status = image.status # ['Benign', 'Malignant', 'Interval Cancer', 'Normal']
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
     # view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
     # laterality = image.laterality # L R
     if ".dcm" in image.path:
+        # If this doesn't work. Check Lidia's https://gitlab.com/eucanimage/BreastCancer/-/blob/master/src/preprocessing/mmg_utils.py
         img_dcm = dicom.dcmread(image.path)
         img_np = img_dcm.pixel_array()
     else:
@@ -102,14 +107,29 @@ class ALLDataset(): # Should work for any center
         
         subjects_selected = {}
         if center!=None:
+            # In case the dataset is multi-centric
             total_subjects = subjects.get_images_by_site(center)
         else:
             # General case
             subjects_selected['benign'] = subjects.get_clients_by_status('Benign')[:load_max] #Note that clients means subjects here.
             subjects_selected['malignant'] = subjects.get_clients_by_status('Malignant')[:load_max]
             subjects_selected['normal'] = subjects.get_clients_by_status('Normal')[:load_max]
-            total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] + subjects_selected['normal']
+
+            if CONFIG['data']['balance']:
+                balance_to_min_index = min([len(subjects_selected['benign']), len(subjects_selected['malignant'])]) #, len(subjects_selected['normal'])])
+                subjects_selected['benign'] = subjects_selected['benign'][:balance_to_min_index]
+                subjects_selected['malignant'] = subjects_selected['malignant'][:balance_to_min_index]
+                # subjects_selected['normal'] = subjects_selected['normal'][:balance_to_min_index]
+                total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] # + subjects_selected['normal']
+                for status in ['benign', 'malignant']:
+                    print(f'Total subjects selected by status ({status}): {len(subjects_selected[status])}')
+            else:
+                total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] + subjects_selected['normal']
+                for status in ['normal', 'benign', 'malignant']:
+                    print(f'Total subjects selected by status ({status}): {len(subjects_selected[status])}')
+        
         random.shuffle(total_subjects) 
+        
         # Data Split
         training_subjects = total_subjects[:int(len(total_subjects)*0.8)]
         validation_subjects = total_subjects[int(len(total_subjects)*0.8):int(len(total_subjects)*0.9)]

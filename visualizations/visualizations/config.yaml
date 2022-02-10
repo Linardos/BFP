@@ -1,16 +1,12 @@
 seed: [0] #[1,2,3,4]
-device: 'cuda'
-name: 'sanity_check_Everycenter_1eprBALANCED' # use 4digit name tag to overwrite experiment with same parameters
+device: 'cpu'
+name: 'sanity_check' # use 4digit name tag to overwrite experiment with same parameters
 # test_unseen: False # this will turn off train mode and test on a specified center
-strategy:
-    min_available_clients: 3 # Change to increase the number of expected clients
-    min_fit_clients: 3 
-    min_eval_clients: 3
-    CD_P: 1.0 # Center Dropout [Percentage] Note that end result will default to min_fit_clients if CD_P results in a lower number of clients.
 hyperparameters:
-    federated_rounds: 5
-    epochs_per_round : 1 # 
-    batch_size : 10  # if 0, it will adapt to center
+    federated_rounds: 3
+    epochs_per_round : 30
+    iteration_number: 8 # this will define the number of batches when doing federated (we want the same number of iterations)
+    batch_size : 4  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
     lr : 0.01
     early_stop_counter: 20 # number of iterations after performance stagnation before stopping
@@ -26,10 +22,12 @@ model:
             pretrained: True
             in_ch: 3
             out_ch: 1
+            linear_ch: 512
             early_layers_learning_rate: 1e-5 #10^-5, if set to 0 early layers will be frozen 
             seed: 42 # Particularly important for federated. Models will make no sense if we aggregate from different initializations
     pretrained: # if we have our own weights
         isTrue: False
+    continue: True # you have to have continue True and name set to an existing folder you want to continue training on
 center: # Ignore this
     UB1: "stge"
     UB2: "jarv"
@@ -37,7 +35,6 @@ data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     labels: [0,1]
     load_max: 15
-    balance: True
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:
@@ -48,7 +45,6 @@ paths:
     csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
     dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
     # Used by server:
-    # logs: BFP/src/server_logs
-    experiments: BFP/src/experiments
+    logs: BFP/src/server_logs
+    experiments: BFP/experiments
     misc: /experiment/misc
-    continue_from_checkpoint: False #/experiments/experiment_folder # If true change False with path to current experiment folder (Not path to checkpoint)

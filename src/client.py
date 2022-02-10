@@ -18,6 +18,7 @@ from tqdm import tqdm
 import numpy as np
 from pathlib import Path
 import pickle
+# from sklearn import roc_auc_score
 # import argparse
 
 
@@ -41,7 +42,8 @@ DATASET_PATH = os.environ['dataset_path']
 LOG_PATH = Path(os.environ['client_log_path']) # This is to store client results
 os.makedirs(LOG_PATH, exist_ok=True)
 
-log_dict = {'local_loss':{0:[]}, 'local_accuracy':[], 'local_val_loss':{0:[]}, 'local_test_accuracy':[], 'local_test_predictions':[]}
+log_dict = {'local_loss':{0:[]}, 'local_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
+            'local_true_positives':[],'local_false_positives':[],'local_false_negatives':[],'local_true_negatives':[]}
 with open(LOG_PATH / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -115,6 +117,7 @@ def probabilities_to_labels(predictions : torch.Tensor) -> torch.Tensor:
 def test(net, validation_loader, criterion):
     """Validate the network on the entire test set."""
     correct, total, cumulative_loss = 0, 0, 0.0
+    false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
     predictions, val_losses = [], []
     print('Validating...')
     with open(LOG_PATH / 'log.pkl', 'rb') as handle:
@@ -130,17 +133,38 @@ def test(net, validation_loader, criterion):
             cumulative_loss += criterion(outputs, labels).item()
             predicted = probabilities_to_labels(outputs.data)
             total += labels.size(0)
+            if predicted.size()[0] != labels.size(0):
+                print(f'predicted {predicted.size()} labels {labels.size()}')
+                import pdb; pdb.set_trace()
+            else:
+                print(f'predicted {predicted.size()} labels {labels.size()}')
             correct += (predicted == labels).sum().item()
+            false_positive += (predicted == 1) & (labels == 0)
+            false_negative += (predicted == 0) & (labels == 1)
+            true_positive += (predicted == 1) & (labels == 1)
+            true_negative += (predicted == 0) & (labels == 0)
             predictions.append(predicted)
             val_losses.append(loss)
     val_loss=sum(val_losses)/len(val_losses)
     log_dict['local_val_loss'][current_round_num]=val_loss
+    accuracy = correct / total
+    # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
+    # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
+    # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
+    log_dict['local_accuracy'].append(accuracy)
+    # log_dict['local_sensitivity'].append(sensitivity)
+    # log_dict['local_specificity'].append(specificity)
+    # Store everything!
+    log_dict['local_true_positives'].append(true_positive.sum().item())
+    log_dict['local_true_negatives'].append(true_negative.sum().item())
+    log_dict['local_false_positives'].append(false_positive.sum().item())
+    log_dict['local_false_negatives'].append(false_negative.sum().item())
+
+    loss = cumulative_loss / total
+    print(accuracy)
     print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    accuracy = correct / total
-    loss = cumulative_loss / total
-    print(accuracy)
     # import pdb; pdb.set_trace()
     # test_results = (loss, accuracy, bytes(predictions))
     test_results = (loss, accuracy)
