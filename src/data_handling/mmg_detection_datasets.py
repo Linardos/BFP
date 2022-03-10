@@ -74,6 +74,14 @@ ACR_DESCRIPTIONS_BCDR = {1: 'Fatty',
                         3: 'Heterogeneously dense',
                         4: 'Extremely dense'} # BI-RADS standard
 
+# CMMD
+MLO_VIEWS_CMMD = ['MLO']
+CC_VIEWS_CMMD = ['CC']
+PIXEL_SIZE_CMMD = [0,0] # Not accessible, so we use 0 for placeholder. Could be useful to have for meta analyses. Maybe in the DICOM headers?
+STATUS_CMMD = ['Benign', 'Malignant']
+MANUFACTURERS_CMMD = ['Unknown']
+
+
 class OPTIMAMAnnotation(AnnotationMMG):
     def __init__(self, lesion_id, mark_id):
         self.lesion_id = lesion_id
@@ -88,6 +96,8 @@ class OPTIMAMAnnotation(AnnotationMMG):
     def conspicuity(self, conspicuity):
         if conspicuity in CONSPICUITY_VALUES_OPTIMAM:
             self._conspicuity = conspicuity
+        else:
+            self._conspicuity = ''
 
 class OPTIMAMImage(ImageMMG):
     def __init__(self, scan_path):
@@ -134,6 +144,7 @@ class OPTIMAMImage(ImageMMG):
                     else:
                         continue
                     category_id = category_id_dict[pathology_selected]
+                # print(annotation.pathologies)
                 bbox_anno = annotation.get_bbox(fit_to_breast)
                 xmin, xmax, ymin, ymax = bbox_anno.xmin, bbox_anno.xmax, bbox_anno.ymin, bbox_anno.ymax
                 #poly = [xmin, ymin],[xmax, ymin],[xmax, ymax],[xmin, ymax]
@@ -174,6 +185,8 @@ class OPTIMAMImage(ImageMMG):
         # Read data augmentation info
         info = pd.read_csv(data_info, index_col=False)
         image_info = info.loc[info['image_id'] == self.id]
+        if image_info.empty:
+            return None, None, obj_count
         h_scale = image_info.h_scale.values[0]
         w_scale = image_info.w_scale.values[0]
         # Read image
@@ -282,6 +295,14 @@ class OPTIMAMDataset(DatasetMMG):
         info = pd.read_csv(info_csv)
         info = info.astype(object).replace(np.nan, '')
 
+        # Breast Density
+        # info_density = pd.read_csv('/home/lidia/Datasets/OPTIMAM/png_screening_cropped_fixed/images.csv')
+        # info_density_studies = pd.read_csv('/home/lidia/Datasets/OPTIMAM/png_screening_cropped_fixed/studies.csv')
+        # info_for_processing = pd.read_csv('/home/lidia/Datasets/OPTIMAM/png_screening_cropped_fixed/summary_clients.csv')
+        info_density = pd.read_csv('/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images.csv')
+        info_density_studies = pd.read_csv('/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/studies.csv')
+        info_for_processing = pd.read_csv('/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/summary_clients.csv')
+
         if detection:
             df_bbox = info.loc[info['x1'] != '']
             unique_study_id_df = df_bbox.groupby(['study_id'], as_index=False)
@@ -295,6 +316,31 @@ class OPTIMAMDataset(DatasetMMG):
             row_client = get_client(study_group.client_id.values[0], study_group.site.values[0])
             bool_update_client = False
             for image_name, image_group in unique_image_id_df:
+                #Breast Density by Image
+                # study_row = info_for_processing.loc[info_for_processing['StudyInstanceUID'] == study_name]
+                # viewcode = info_for_processing.loc[info_for_processing['SOPInstanceUID'] == image_name]['ViewModCodeValue'].values[0]
+                # view_rows = study_row.loc[study_row['ViewModCodeValue'] == viewcode]
+                # image_rows = view_rows.loc[view_rows['ImageLaterality'] == image_group.laterality.values[0]]
+                # if not image_rows.loc[image_rows['SOPInstanceUID'] != image_name]['SOPInstanceUID'].empty:
+                #     image_for_processing = image_rows.loc[image_rows['SOPInstanceUID'] != image_name]['SOPInstanceUID'].values[0]
+                #     if info_density.loc[info_density['ImageName'] == image_for_processing]['VolumetricBreastDensity'].empty:
+                #         vbd = 0
+                #     else:
+                #         vbd = float(info_density.loc[info_density['ImageName'] == image_for_processing]['VolumetricBreastDensity'])
+                # else:
+                #     vbd = 0
+                vbd = 0
+                # Breast Density by Study
+                # study_row = info_for_processing.loc[info_for_processing['StudyInstanceUID'] == study_name]
+                # study_path = study_row['ClientID'].values[0] + '/'+ study_row['StudyInstanceUID'].values[0]
+                # sel_study_row = info_density_studies.loc[info_density_studies['Path'] == study_path]
+                # if not sel_study_row.empty:
+                #     if sel_study_row['Max VBD%'].empty:
+                #         vbd = 0
+                #     else:
+                #         vbd = float(sel_study_row['Max VBD%'].values[0])
+                # else:
+                #     vbd = 0
                 if image_ids:
                     if image_name not in image_ids:
                         continue
@@ -341,6 +387,7 @@ class OPTIMAMDataset(DatasetMMG):
                         new_image.breast_bbox = BBox(image.xmin_cropped, image.xmax_cropped, image.ymin_cropped, image.ymax_cropped)
                         new_image.cropped_to_breast = cropped_to_breast
                         new_image.age = image.age
+                        new_image.breast_density = vbd
                         init_image = False
                     if image.x1:
                         new_annotation = OPTIMAMAnnotation(lesion_id=image.lesion_id,
@@ -500,7 +547,7 @@ class INBreastDataset(DatasetMMG):
                 if patient_group.patient_id.values[0] not in client_ids:
                     continue
             unique_image_id_df = patient_group.groupby(['image_id'], as_index=False)
-            row_client = get_client(patient_group.patient_id.values[0], SITES_INBREAST[0], patient_group.ACR.values[0])
+            row_client = get_client(patient_group.patient_id.values[0], SITES_INBREAST[0], int(patient_group.ACR.values[0]))
             bool_update_client = False
             for image_name, image_group in unique_image_id_df:
                 if image_ids:
@@ -596,6 +643,119 @@ class INBreastDataset(DatasetMMG):
                 update_client(row_client)
                 if self.images_ctr == self.load_max:
                     break
+
+class CMMDImage(ImageMMG):
+    def __init__(self, scan_path):
+        self.breast_width = None
+        self.breast_height = None
+        super().__init__(scan_path)
+class CMMDDataset(DatasetMMG):
+    def __init__(self, info_csv:str, dataset_path:str, cropped_to_breast=False, 
+                client_ids=None, image_ids=None, load_max=-1):
+        
+        super().__init__(info_csv, dataset_path, cropped_to_breast, 
+                         client_ids, image_ids, load_max)
+
+        self.clients_dict = {}
+
+        def get_client(client_id, site, breast_density):
+            if client_id in self.clients_dict.keys():
+                index = self.clients_dict[client_id]
+                return self.clients[index]
+            new_client = ClientMMG(client_id)
+            new_client.site = site
+            new_client.breast_density = breast_density
+            return new_client
+
+        def update_client(client:ClientMMG):
+            if len(self.clients):
+                if client.id in self.clients_dict.keys():
+                    index = self.clients_dict[client.id]
+                    self.clients[index] = client
+                    return
+            self.clients.append(client)
+            self.clients_dict[client.id] = len(self.clients) - 1
+
+        info = pd.read_csv(info_csv)
+        info = info.astype(object).replace(np.nan, '')
+
+        unique_patient_id_df = info.groupby(['patient_id'], as_index=False)
+
+        for patient_id, patient_group in unique_patient_id_df:
+            if client_ids:
+            # Select a subset of clients if client_ids is specified (can be a list).
+                if patient_group.patient_id.values[0] not in client_ids:
+                    continue
+
+            # TO BE ROBUST: Study id check
+            unique_study_id_df = patient_group.groupby(['study_id'], as_index=False)
+            for study_id, patient_study_group in unique_study_id_df:
+                unique_series_df = patient_study_group.groupby(['series_id'], as_index=False)
+                for series_id, series_group in unique_series_df:
+            ####
+                    unique_image_id_df = patient_group.groupby(['image_id'], as_index=False)
+                    # Check if client already exists and append to it the new image. Otherwise creates new client.
+                    row_client = get_client(patient_group.patient_id.values[0], "CMMD", 0) # Replace 0 with this: int(patient_group.ACR.values[0])) if we have ACR info
+                    bool_update_client = False
+                    for image_name, image_group in unique_image_id_df:
+                        if image_ids: # we select by image id. You can select a subset using image_ids.
+                            if image_name not in image_ids:
+                                continue
+                        # Create new image
+                        scan_png_path = image_group.scan_path.values[0] #.replace('nii.gz', 'png')
+                        scan_path = os.path.join(dataset_path, scan_png_path)
+                        
+                        new_image = CMMDImage(scan_path)
+                        view = image_group.view.values[0]
+                        valid_view =  True
+                        if view in CC_VIEWS_CMMD:
+                            new_image.view = 'CC'
+                        elif view in MLO_VIEWS_CMMD:
+                            new_image.view = 'MLO'
+                        else:
+                            #print(f'Error: view {view} not found in list -> Discard image')
+                            valid_view =  False
+                        if not valid_view:
+                            # Sanity check
+                            continue
+                        init_image = True
+                        for idx_mark, image in enumerate(image_group.itertuples()):
+                            status = image.status
+                            if status not in STATUS_CMMD:
+                                print(f'Wrong status: {image.status} in image: {image.image_id}')
+                                continue
+                            if init_image:
+                                new_image.id = image.image_id
+                                new_image.laterality = image.laterality 
+                                new_image.status = status
+                                new_image.site = 'CMMD' 
+                                new_image.manufacturer = MANUFACTURERS_CMMD[0]
+                                new_image.pixel_spacing = PIXEL_SIZE_CMMD[0]
+                                new_image.implant = 'NO'
+                                new_image.cropped_to_breast = cropped_to_breast # Should be done on runtime, so we stick to False for now
+                                # new_image.width = image.scan_width
+                                # new_image.height = image.scan_height
+                                # new_image.breast_width = image.breast_width
+                                # new_image.breast_height = image.breast_height
+                                new_image.breast_density = 0 # Not available # Handle with if statement later. image.ACR
+                                init_image = False
+            
+                        if not init_image:
+                            # Update study
+                            row_study = row_client.get_study(image.study_id)
+                            if row_study is None:
+                                row_study = StudyMMG(image.study_id)
+                            row_study.add_image(new_image)
+                            # Update client
+                            row_client.update_study(row_study)
+                            self.images_ctr += 1
+                            bool_update_client = True
+                            if self.images_ctr == self.load_max:
+                                break
+                    if bool_update_client:
+                        update_client(row_client)
+                        if self.images_ctr == self.load_max:
+                            break
 
 class BCDRAnnotation(AnnotationMMG):
     def __init__(self, lesion_id, segmentation_id):
@@ -747,7 +907,8 @@ class BCDRDataset(DatasetMMG):
                 # if str(patient_id) == '143':
                 #     stop = True
                 if client_ids:
-                    if patient_group.patient_id.values[0] not in client_ids:
+                    client_id = str(dataset_path_i.split('/')[-1]) + '_' + str(patient_group.patient_id.values[0])
+                    if client_id not in client_ids:
                         continue
                 unique_study_id_df = patient_group.groupby(['study_id'], as_index=False)
                 # if len(unique_study_id_df) > 1:
