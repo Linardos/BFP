@@ -42,8 +42,14 @@ DATASET_PATH = os.environ['dataset_path']
 LOG_PATH = Path(os.environ['client_log_path']) # This is to store client results
 os.makedirs(LOG_PATH, exist_ok=True)
 
+# Global Model Local Data : GMLD
+# Local Model Local Data : LMLD
+# Global Model Aggregated Metrics : GMAM
+
 log_dict = {'local_loss':{0:[]}, 'local_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
-            'local_true_positives':[],'local_false_positives':[],'local_false_negatives':[],'local_true_negatives':[]}
+            'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[],
+            'LMLD_train_true_positives':[], 'LMLD_train_false_positives':[], 'LMLD_train_false_negatives':[], 'LMLD_train_true_negatives':[],
+            'LMLD_val_true_positives':[], 'LMLD_val_false_positives':[], 'LMLD_val_false_negatives':[], 'LMLD_val_true_negatives':[],}
 with open(LOG_PATH / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -98,6 +104,66 @@ def train(net, training_loader, criterion):
             optimizer.step()
 
         log_dict['local_loss'][current_round_num].append(loss.item())
+
+    # FOR SANITY CHECK, REMOVE LATER:
+    correct, total, cumulative_loss = 0, 0, 0.0
+    false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
+    for i, batch in enumerate(tqdm(training_loader)):
+        images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+        outputs = net(images)
+        loss = criterion(outputs, labels).item()
+        #
+        cumulative_loss += criterion(outputs, labels).item()
+        predicted = probabilities_to_labels(outputs.data)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+        false_positive += ((predicted == 1) & (labels == 0)).sum().item()
+        false_negative += ((predicted == 0) & (labels == 1)).sum().item()
+        true_positive += ((predicted == 1) & (labels == 1)).sum().item()
+        true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+        val_losses.append(loss)
+
+    accuracy = correct / total
+    # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
+    # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
+    # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
+    log_dict['LMLD_accuracy'].append(accuracy)
+    # Store everything!
+    log_dict['LMLD_train_true_positives'].append(true_positive)
+    log_dict['LMLD_train_false_positives'].append(false_positive)
+    log_dict['LMLD_train_true_negatives'].append(true_negative)
+    log_dict['LMLD_train_false_negatives'].append(false_negative)
+
+    
+    correct, total, cumulative_loss = 0, 0, 0.0
+    false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
+    for i, batch in enumerate(tqdm(training_loader)):
+        images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+        outputs = net(images)
+        loss = criterion(outputs, labels).item()
+        #
+        cumulative_loss += criterion(outputs, labels).item()
+        predicted = probabilities_to_labels(outputs.data)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+        false_positive += ((predicted == 1) & (labels == 0)).sum().item()
+        false_negative += ((predicted == 0) & (labels == 1)).sum().item()
+        true_positive += ((predicted == 1) & (labels == 1)).sum().item()
+        true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+        val_losses.append(loss)
+
+    accuracy = correct / total
+    # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
+    # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
+    # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
+    log_dict['LMLD_accuracy'].append(accuracy)
+    # Store everything!
+    log_dict['LMLD_val_true_positives'].append(true_positive)
+    log_dict['LMLD_val_false_positives'].append(false_positive)
+    log_dict['LMLD_val_true_negatives'].append(true_negative)
+    log_dict['LMLD_val_false_negatives'].append(false_negative)
+    ####  
+
     print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -130,20 +196,16 @@ def test(net, validation_loader, criterion):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             outputs = net(images)
             loss = criterion(outputs, labels).item()
+            # 
             cumulative_loss += criterion(outputs, labels).item()
             predicted = probabilities_to_labels(outputs.data)
             total += labels.size(0)
-            if predicted.size()[0] != labels.size(0):
-                print(f'predicted {predicted.size()} labels {labels.size()}')
-                import pdb; pdb.set_trace()
-            else:
-                print(f'predicted {predicted.size()} labels {labels.size()}')
             correct += (predicted == labels).sum().item()
             false_positive += ((predicted == 1) & (labels == 0)).sum().item()
             false_negative += ((predicted == 0) & (labels == 1)).sum().item()
             true_positive += ((predicted == 1) & (labels == 1)).sum().item()
             true_negative += ((predicted == 0) & (labels == 0)).sum().item()
-            predictions.append(predicted)
+            # predictions.append(predicted)
             val_losses.append(loss)
     val_loss=sum(val_losses)/len(val_losses)
     log_dict['local_val_loss'][current_round_num]=val_loss
@@ -151,14 +213,14 @@ def test(net, validation_loader, criterion):
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
     # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
     # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
-    log_dict['local_accuracy'].append(accuracy)
+    log_dict['GMLD_accuracy'].append(accuracy)
     # log_dict['local_sensitivity'].append(sensitivity)
     # log_dict['local_specificity'].append(specificity)
     # Store everything!
-    log_dict['local_true_positives'].append(true_positive)
-    log_dict['local_true_negatives'].append(true_negative)
-    log_dict['local_false_positives'].append(false_positive)
-    log_dict['local_false_negatives'].append(false_negative)
+    log_dict['GMLD_true_positives'].append(true_positive)
+    log_dict['GMLD_false_positives'].append(false_positive)
+    log_dict['GMLD_true_negatives'].append(true_negative)
+    log_dict['GMLD_false_negatives'].append(false_negative)
 
     loss = cumulative_loss / total
     print(accuracy)
@@ -169,6 +231,8 @@ def test(net, validation_loader, criterion):
     # test_results = (loss, accuracy, bytes(predictions))
     test_results = (loss, accuracy)
     return test_results
+
+
 
 class ClassificationClient(fl.client.NumPyClient):
     def __init__(self):
