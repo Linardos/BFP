@@ -139,10 +139,10 @@ def test(net, validation_loader, criterion):
             else:
                 print(f'predicted {predicted.size()} labels {labels.size()}')
             correct += (predicted == labels).sum().item()
-            false_positive += (predicted == 1) & (labels == 0)
-            false_negative += (predicted == 0) & (labels == 1)
-            true_positive += (predicted == 1) & (labels == 1)
-            true_negative += (predicted == 0) & (labels == 0)
+            false_positive += ((predicted == 1) & (labels == 0)).sum().item()
+            false_negative += ((predicted == 0) & (labels == 1)).sum().item()
+            true_positive += ((predicted == 1) & (labels == 1)).sum().item()
+            true_negative += ((predicted == 0) & (labels == 0)).sum().item()
             predictions.append(predicted)
             val_losses.append(loss)
     val_loss=sum(val_losses)/len(val_losses)
@@ -155,10 +155,10 @@ def test(net, validation_loader, criterion):
     # log_dict['local_sensitivity'].append(sensitivity)
     # log_dict['local_specificity'].append(specificity)
     # Store everything!
-    log_dict['local_true_positives'].append(true_positive.sum().item())
-    log_dict['local_true_negatives'].append(true_negative.sum().item())
-    log_dict['local_false_positives'].append(false_positive.sum().item())
-    log_dict['local_false_negatives'].append(false_negative.sum().item())
+    log_dict['local_true_positives'].append(true_positive)
+    log_dict['local_true_negatives'].append(true_negative)
+    log_dict['local_false_positives'].append(false_positive)
+    log_dict['local_false_negatives'].append(false_negative)
 
     loss = cumulative_loss / total
     print(accuracy)

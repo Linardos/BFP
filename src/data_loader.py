@@ -84,26 +84,27 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
         img_pil = Image.open(image.path).convert('RGB')
         img_np = np.array(img_pil)
     scale_size = (rescale_height, rescale_width)
-    if len(rescaled_img.shape) > 2:
+    if len(img_np.shape) > 2:
         img_np = img_np.transpose(2,0,1)[0] # remove redundant channel dimensions
     # CROP!
     img_np = crop_MG(img_np) # Works for CMMD. InBreast already cropped.
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')
 
-    image = torch.from_numpy(rescaled_img)
+    image = torch.from_numpy(rescaled_img).unsqueeze(0)
+    image = image.repeat(3,1,1) # Convert to 3 channels just because for some reason there's no better solution yet. https://github.com/pytorch/vision/issues/1732
     
     # Histogram Matching 
     landmarks_values = torch.load(HOME_PATH / LANDMARKS)
     apply_hist_stand_landmarks(image, landmarks_values)
 
     
-    # Let's see if we need this.
-    # paddedimg = torch.zeros(224,224)
-    # c,h,w = image.shape
-    # paddedimg[:,-h:,-w:]=Image
+    # Images need to be same size. So pad with zeros after cropping. Maybe rescaling is better? Not sure.
+    paddedimg = torch.zeros(3,224,190) # 190 MIGHT NOT BE LARGE ENOUGH. IF RUNTIME ERROR POPS UP, INCREASE IT.
+    c,h,w = image.shape
+    paddedimg[:,-h:,-w:]=image
 
-    return image, label
+    return paddedimg, label
 
 class ALLDataset(): # Should work for any center
     def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=1000, center=None): 
