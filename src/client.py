@@ -137,7 +137,7 @@ def train(net, training_loader, criterion):
     
     correct, total, cumulative_loss = 0, 0, 0.0
     false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
-    for i, batch in enumerate(tqdm(training_loader)):
+    for i, batch in enumerate(tqdm(validation_loader)):
         images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
         outputs = net(images)
         loss = criterion(outputs, labels).item()

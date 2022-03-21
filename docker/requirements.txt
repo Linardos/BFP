@@ -8,9 +8,9 @@ openpyxl==3.0.9
 pandas
 Pillow==8.4.0
 PyYAML==6.0
+pydicom==2.2.2
 scikit_learn
 scipy
 SimpleITK
 scikit-image
 tqdm==4.62.3
-pydicom
