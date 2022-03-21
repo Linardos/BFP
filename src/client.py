@@ -47,7 +47,8 @@ os.makedirs(LOG_PATH, exist_ok=True)
 # Global Model Aggregated Metrics : GMAM
 
 log_dict = {'local_loss':{0:[]}, 'local_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
-            'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[],
+            'GMLD_accuracy':[], 'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[],
+            'LMLD_train_accuracy':[], 'LMLD_val_accuracy':[],
             'LMLD_train_true_positives':[], 'LMLD_train_false_positives':[], 'LMLD_train_false_negatives':[], 'LMLD_train_true_negatives':[],
             'LMLD_val_true_positives':[], 'LMLD_val_false_positives':[], 'LMLD_val_false_negatives':[], 'LMLD_val_true_negatives':[],}
 with open(LOG_PATH / "log.pkl", 'wb') as handle:
@@ -121,13 +122,12 @@ def train(net, training_loader, criterion):
         false_negative += ((predicted == 0) & (labels == 1)).sum().item()
         true_positive += ((predicted == 1) & (labels == 1)).sum().item()
         true_negative += ((predicted == 0) & (labels == 0)).sum().item()
-        val_losses.append(loss)
 
     accuracy = correct / total
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
     # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
     # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
-    log_dict['LMLD_accuracy'].append(accuracy)
+    log_dict['LMLD_train_accuracy'].append(accuracy)
     # Store everything!
     log_dict['LMLD_train_true_positives'].append(true_positive)
     log_dict['LMLD_train_false_positives'].append(false_positive)
@@ -150,13 +150,12 @@ def train(net, training_loader, criterion):
         false_negative += ((predicted == 0) & (labels == 1)).sum().item()
         true_positive += ((predicted == 1) & (labels == 1)).sum().item()
         true_negative += ((predicted == 0) & (labels == 0)).sum().item()
-        val_losses.append(loss)
 
     accuracy = correct / total
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
     # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
     # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
-    log_dict['LMLD_accuracy'].append(accuracy)
+    log_dict['LMLD_val_accuracy'].append(accuracy)
     # Store everything!
     log_dict['LMLD_val_true_positives'].append(true_positive)
     log_dict['LMLD_val_false_positives'].append(false_positive)
