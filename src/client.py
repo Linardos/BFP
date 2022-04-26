@@ -55,9 +55,9 @@ with open(LOG_PATH / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # SERVER=os.environ['server']
-# SERVER = "161.116.4.137:8080" # server without docker at BCN-AIM cluster
+# SERVER = "161.116.4.132:8080" # server without docker at BCN-AIM cluster
 # SERVER= os.getenv('server',"[::]:8080")
-SERVER= os.getenv('server',"161.116.4.137:8080") 
+SERVER= os.getenv('server',"161.116.4.132:8080") 
 DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
 
 # Docker ip is: 172.17.0.3
@@ -83,7 +83,7 @@ def load_data():
     print(len(training_loader))
     return training_loader, validation_loader #test_loader
 
-def train(net, training_loader, criterion):
+def train(net, training_loader, validation_loader, criterion):
     """Train the network on the training set."""
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     losses = []
@@ -250,7 +250,7 @@ class ClassificationClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         self.set_parameters(parameters)
-        results = train(self.net, self.train_loader, criterion=CRITERION())
+        results = train(self.net, self.train_loader, self.validation_loader, criterion=CRITERION()) # validation loader for sanity check only
         results = {
             'cumulative_loss': float(results)
         }
@@ -268,7 +268,7 @@ class ClassificationClient(fl.client.NumPyClient):
         return float(loss), len(self.validation_loader), test_results 
 
 # fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
-# fl.client.start_numpy_client("161.116.4.137", client=ClassificationClient())
+# fl.client.start_numpy_client("161.116.4.132", client=ClassificationClient())
 #fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
 
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())

@@ -18,7 +18,7 @@ git clone https://github.com/Linardos/BFP.git
 cd BFP
 ```
 
-## Run FD client
+## Run FD client (OPTIMAM)
 Defining the environmental variables and running the client.
 
 ```bash
@@ -29,6 +29,10 @@ DATA_LOADER_TYPE=optimam
 
 docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e data_loader_type=$DATA_LOADER_TYPE -e dataset_path=/BFP/dataset/images -e server=84.88.186.195:8080 -e client_log_path=/BFP/src/client_logs -e NVIDIA_VISIBLE_DEVICES=2 --runtime=nvidia -e NVIDIA_DRIVER_CAPABILITIES=compute,utility registry.gitlab.bsc.es/bfp/fl_breast_mg_classification
 ```
+
+# OPTIMAM stge / jarv center split:
+replace CSV_FILENAME=client_images_screening.csv with: CSV_FILENAME=jarv_info.csv or CSV_FILENAME=stge_info.csv 
+
 
 ## For clients using BCDR, InBreast or CMMD datasets:
 
@@ -71,3 +75,4 @@ DATA_LOADER_TYPE=cmmd
 docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/ -e data_loader_type=$DATA_LOADER_TYPE -e dataset_path=/BFP/dataset/ -e server=84.88.186.195:8080 -e client_log_path=/BFP/src/client_logs -e NVIDIA_VISIBLE_DEVICES=2 --runtime=nvidia -e NVIDIA_DRIVER_CAPABILITIES=compute,utility registry.gitlab.bsc.es/bfp/fl_breast_mg_classification
 
 ```
+

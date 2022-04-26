@@ -87,7 +87,7 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     if len(img_np.shape) > 2:
         img_np = img_np.transpose(2,0,1)[0] # remove redundant channel dimensions
     # CROP!
-    img_np = crop_MG(img_np) # Works for CMMD. InBreast already cropped.
+    img_np = crop_MG(img_np) # Works for CMMD.
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')
 
@@ -100,7 +100,7 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
 
     
     # Images need to be same size. So pad with zeros after cropping. Maybe rescaling is better? Not sure.
-    paddedimg = torch.zeros(3,224,190) # 190 MIGHT NOT BE LARGE ENOUGH. IF RUNTIME ERROR POPS UP, INCREASE IT.
+    paddedimg = torch.zeros(3,224,224) # There are inconsistencies between datasets. So we negate the crop. Yeah we came full circle. What can you do.
     c,h,w = image.shape
     paddedimg[:,-h:,-w:]=image
 

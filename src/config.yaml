@@ -3,10 +3,11 @@ device: 'cuda'
 name: 'sanity_check_Everycenter_30epr1fr_BALANCED' # use 4digit name tag to overwrite experiment with same parameters
 # test_unseen: False # this will turn off train mode and test on a specified center
 strategy:
-    min_available_clients: 3 # Change to increase the number of expected clients
-    min_fit_clients: 3 
-    min_eval_clients: 3
-    CD_P: 1.0 # Center Dropout [Percentage] Note that end result will default to min_fit_clients if CD_P results in a lower number of clients.
+    min_available_clients: 5 # Change to increase the number of expected clients
+    min_fit_clients: 5
+    min_eval_clients: 5
+    CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
+    # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
     federated_rounds: 1
     epochs_per_round : 30 # 
@@ -30,9 +31,6 @@ model:
             seed: 42 # Particularly important for federated. Models will make no sense if we aggregate from different initializations
     pretrained: # if we have our own weights
         isTrue: False
-center: # Ignore this
-    UB1: "stge"
-    UB2: "jarv"
 data:
     pathologies: ['mass'] #,'RV','DCM','MINF'] #, 'RV'] #, 'DCM' ['DCM', 'HCM', 'NOR', 'RV']
     labels: [0,1]
