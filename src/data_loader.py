@@ -107,9 +107,9 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
-    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=1000, center=None): 
+    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=-1, center=None): 
         if data_loader_type == 'optimam':
-            subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+            subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
                                 cropped_to_breast=True) # we should be able to load any dataset with this
         elif data_loader_type == 'bcdr':
             # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
@@ -119,15 +119,15 @@ class ALLDataset(): # Should work for any center
             dataset_path = [os.path.join(dataset_path,'cropped/BCDR-D01_dataset'),
                             os.path.join(dataset_path,'cropped/BCDR-D02_dataset'),
                             os.path.join(dataset_path,'cropped/BCDR-DN01_dataset')]
-            subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+            subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
                                 cropped_to_breast=True)
         elif data_loader_type == 'inbreast':
             # csv_path = '/home/lidia-garrucho/datasets/INBREAST/INbreast_updated_cropped_breast.csv'
             # dataset_path = '/home/lidia-garrucho/datasets/INBREAST/AllPNG_cropped'
-            subjects = INBreastDataset(csv_path, dataset_path, detection=False, load_max=-1, 
+            subjects = INBreastDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
                                 cropped_to_breast=True)
         elif data_loader_type == 'general' or 'cmmd':
-            subjects = CMMDDataset(csv_path, dataset_path, load_max=-1)
+            subjects = CMMDDataset(csv_path, dataset_path, load_max=load_max)
         
         # subjects_selected = {}
         if center!=None:
