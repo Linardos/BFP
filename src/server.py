@@ -11,9 +11,15 @@ import numpy as np
 import torch
 import pickle
 import yaml
+import argparse
 from pathlib import Path
 
 from models import nets
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-c","--center_number", type=int, help="Center Number", default=5)
+args = parser.parse_args()
+# print(args.center_number)
 
 HOME_PATH = Path.home()
 config_file = Path('config.yaml')
@@ -214,9 +220,12 @@ def load_parameters_from_disk():
 ### ====== Define strategy and initiate server ====== ###
 strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
-    min_available_clients = CONFIG['strategy']['min_available_clients'],
-    min_fit_clients = CONFIG['strategy']['min_fit_clients'],
-    min_eval_clients = CONFIG['strategy']['min_eval_clients'],
+    min_available_clients = args.center_number,
+    min_fit_clients = args.center_number,
+    min_eval_clients = args.center_number,
+    # min_available_clients = CONFIG['strategy']['min_available_clients'],
+    # min_fit_clients = CONFIG['strategy']['min_fit_clients'],
+    # min_eval_clients = CONFIG['strategy']['min_eval_clients'],
     fraction_fit = CONFIG['strategy']['CD_P'],
     # initial_parameters=load_parameters_from_disk() if CONFIG['paths']['continue_from_checkpoint'] else None
 )
