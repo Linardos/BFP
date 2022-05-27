@@ -11,10 +11,12 @@ import numpy as np
 import torch
 import pickle
 import yaml
+import importlib
 import argparse
 from pathlib import Path
 
 from models import nets
+import aggregator
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c","--center_number", type=int, help="Center Number", default=5)
@@ -26,6 +28,7 @@ config_file = Path('config.yaml')
 with open(config_file) as file:
   CONFIG = yaml.safe_load(file)
 
+os.environ['server'] = f"161.116.4.132:{CONFIG['port']}"
 DEVICE = torch.device(CONFIG['device'])
 def import_class(name):
     module_name, class_name = name.rsplit('.', 1)
@@ -93,10 +96,15 @@ with open(PATH_TO_EXPERIMENT / 'log.pkl', 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 #\\ ====== Log ====== #\\
 
-net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False).to(DEVICE)
+# net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False).to(DEVICE)
 # net = import_class(CONFIG['model']['arch']['function'])
 INITIAL_TIME = time.time()
 
+Model = import_class(CONFIG['model']['arch']['function'])
+if CONFIG['model']['arch']['args']:
+    net = Model(**CONFIG['model']['arch']['args'])
+else:
+    net = Model()
 ### ====== Center Dropout (Under Development) ====== ###
 # class CDCriterion(fl.server.criterion.Criterion):
 #     def __init__(self, criterion, dropout_prob):
@@ -131,8 +139,14 @@ INITIAL_TIME = time.time()
 #\\ ====== Center Dropout (Under Development) ====== #\\
 
 
+def import_class(name):
+    module_name, class_name = name.rsplit('.', 1)
+    module = importlib.import_module(module_name)
+    return getattr(module, class_name)
+
+
 ### ====== Strategy for Checkpointing and Metrics ====== ###
-class SaveModelAndMetricsStrategy(fl.server.strategy.FedAvg):
+class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])):
     #
     def aggregate_fit(
         self,
@@ -229,5 +243,5 @@ strategy = SaveModelAndMetricsStrategy(
     fraction_fit = CONFIG['strategy']['CD_P'],
     # initial_parameters=load_parameters_from_disk() if CONFIG['paths']['continue_from_checkpoint'] else None
 )
-fl.server.start_server(strategy=strategy, server_address="[::]:8080", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})
+fl.server.start_server(strategy=strategy, server_address=f"[::]:{CONFIG['port']}", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})
 #\\ ====== Define strategy and initiate server ====== #\\

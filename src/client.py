@@ -39,14 +39,69 @@ DATASET_PATH = os.environ['dataset_path']
 
 ### IMPORTANT!!! When running out of docker, run this on terminal first:
 # export client_log_path=/home/akis-linardos/BFP/src/client_logs/c1 <- should be unique for each worker (c1, c2, etc)
-LOG_PATH = Path(os.environ['client_log_path']) # This is to store client results
+### ====== Make Experiment Folder ====== ###
+if CONFIG['docker'] == False:
+    path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Without Docker
+else:
+    path_to_experiments = Path("/") / Path(CONFIG['paths']['experiments']) # With Docker !!!!REMEMBER TO CHANGE THIS!!!!
+
+if not os.path.exists(path_to_experiments):
+    os.mkdir(path_to_experiments)
+
+experiment_name = CONFIG['name']+"Client_Logs"
+if experiment_name[0:4].isdigit():
+    # note that if you want to continue or overwrite an experiment you should use the full name including the digit
+    new_experiment_name = experiment_name 
+else:
+    # add a new tag to create a new experiment
+    max_tag = 0
+    for file in path_to_experiments.iterdir():
+        if str(file.name)[0:4].isdigit():
+            if max_tag < int(str(file.name)[0:4]):
+                max_tag = int(str(file.name)[0:4])
+    tag = str(max_tag+1).zfill(4)
+    new_experiment_name = tag + '_' + experiment_name
+
+    
+    '''
+    To avoid cluttering the experiments folder when dealing with errors, 
+    this will make sure not to create a new tag for a duplicate file name that's been created within the last 10 minutes
+    '''
+    possible_last_file = str(max_tag).zfill(4) + '_' +experiment_name 
+    possible_last_file = path_to_experiments.joinpath(possible_last_file)
+    if possible_last_file.exists():
+        timestamp = datetime.fromtimestamp(possible_last_file.stat().st_mtime)
+        now = datetime.now()
+        if timestamp.hour == now.hour and now.minute-timestamp.minute<20:
+            new_experiment_name = possible_last_file # overwrite in this case
+            
+    
+PATH_TO_EXPERIMENT = path_to_experiments.joinpath(new_experiment_name)
+print(f"Generating experiment {new_experiment_name}")
+
+# else:
+#     if not config['model']['continue']:
+#         print(f"Deleting {MODEL_STORAGE}")
+#         for f in MODEL_STORAGE.iterdir():
+#             f.unlink() #empty directory for new model states. 
+#make a copy of config file in new experiment to keep track of parameters.
+
+if not os.path.exists(PATH_TO_EXPERIMENT):
+    os.makedirs(PATH_TO_EXPERIMENT)
+
+# EXP_PATH = HOME_PATH.joinpath('BFP/src/experiments')
+# os.makedirs(EXP_PATH, exist_ok=True)
+# print(EXP_PATH)
+LOG_PATH = Path.joinpath(PATH_TO_EXPERIMENT, os.environ['client_log_path']) # This is to store client results
+# print(LOG_PATH)
 os.makedirs(LOG_PATH, exist_ok=True)
+#\\ ====== Make Experiment Client Log Folder ====== #\\
 
 # Global Model Local Data : GMLD
 # Local Model Local Data : LMLD
 # Global Model Aggregated Metrics : GMAM
 
-log_dict = {'local_loss':{0:[]}, 'local_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
+log_dict = {'local_loss':{0:[]}, 'GMLD_val_loss':{0:[]}, 'LMLD_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
             'GMLD_accuracy':[], 'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[],
             'LMLD_train_accuracy':[], 'LMLD_val_accuracy':[],
             'LMLD_train_true_positives':[], 'LMLD_train_false_positives':[], 'LMLD_train_false_negatives':[], 'LMLD_train_true_negatives':[],
@@ -55,9 +110,10 @@ with open(LOG_PATH / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 # SERVER=os.environ['server']
-# SERVER = "161.116.4.132:8080" # server without docker at BCN-AIM cluster
-# SERVER= os.getenv('server',"[::]:8080")
-SERVER= os.getenv('server',"161.116.4.132:8080") 
+# SERVER = "161.116.4.132:{CONFIG['port']}" # server without docker at BCN-AIM cluster
+# SERVER= os.getenv('server',"[::]:{CONFIG['port']}")
+os.environ['server'] = f"161.116.4.132:{CONFIG['port']}"
+SERVER= os.getenv('server',f"161.116.4.132:{CONFIG['port']}") 
 DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
 
 # Docker ip is: 172.17.0.3
@@ -133,8 +189,10 @@ def train(net, training_loader, validation_loader, criterion):
     log_dict['LMLD_train_false_positives'].append(false_positive)
     log_dict['LMLD_train_true_negatives'].append(true_negative)
     log_dict['LMLD_train_false_negatives'].append(false_negative)
-
     
+    current_epoch_num=list(log_dict['LMLD_val_loss'].keys())[-1]
+    next_epoch_num=current_epoch_num+1
+    log_dict['LMLD_val_loss'][next_epoch_num]=[] # A key for the next round is generated. Final round will always remain empty
     correct, total, cumulative_loss = 0, 0, 0.0
     false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
     for i, batch in enumerate(tqdm(validation_loader)):
@@ -150,6 +208,7 @@ def train(net, training_loader, validation_loader, criterion):
         false_negative += ((predicted == 0) & (labels == 1)).sum().item()
         true_positive += ((predicted == 1) & (labels == 1)).sum().item()
         true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+    log_dict['LMLD_val_loss'][current_epoch_num].append(loss)
 
     accuracy = correct / total
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
@@ -163,7 +222,7 @@ def train(net, training_loader, validation_loader, criterion):
     log_dict['LMLD_val_false_negatives'].append(false_negative)
     ####  
 
-    print(log_dict)
+    # print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     train_results = cumulative_loss #(losses, predictions)
@@ -187,9 +246,9 @@ def test(net, validation_loader, criterion):
     print('Validating...')
     with open(LOG_PATH / 'log.pkl', 'rb') as handle:
         log_dict = pickle.load(handle)
-    current_round_num=list(log_dict['local_val_loss'].keys())[-1]
+    current_round_num=list(log_dict['GMLD_val_loss'].keys())[-1]
     next_round_num=current_round_num+1
-    log_dict['local_val_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
+    log_dict['GMLD_val_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
     with torch.no_grad():
         for i, batch in enumerate(tqdm(validation_loader)):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
@@ -207,7 +266,7 @@ def test(net, validation_loader, criterion):
             # predictions.append(predicted)
             val_losses.append(loss)
     val_loss=sum(val_losses)/len(val_losses)
-    log_dict['local_val_loss'][current_round_num]=val_loss
+    log_dict['GMLD_val_loss'][current_round_num]=val_loss
     accuracy = correct / total
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
     # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
@@ -223,7 +282,7 @@ def test(net, validation_loader, criterion):
 
     loss = cumulative_loss / total
     print(accuracy)
-    print(log_dict)
+    # print(log_dict)
     with open(LOG_PATH / "log.pkl", 'wb') as handle:
         pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
     # import pdb; pdb.set_trace()
@@ -236,7 +295,12 @@ def test(net, validation_loader, criterion):
 class ClassificationClient(fl.client.NumPyClient):
     def __init__(self):
         super(ClassificationClient, self).__init__()
-        self.net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+        # self.net = nets.ResNet101Classifier(in_ch=3, out_ch=1, pretrained=False)
+        Model = import_class(CONFIG['model']['arch']['function'])
+        if CONFIG['model']['arch']['args']:
+            self.net = Model(**CONFIG['model']['arch']['args'])
+        else:
+            self.net = Model()
         self.net.to(DEVICE)
         self.train_loader, self.validation_loader = load_data()
 
@@ -267,13 +331,13 @@ class ClassificationClient(fl.client.NumPyClient):
         }
         return float(loss), len(self.validation_loader), test_results 
 
-# fl.client.start_numpy_client("[::]:8080", client=ClassificationClient())
+# fl.client.start_numpy_client("[::]:{CONFIG['port']}", client=ClassificationClient())
 # fl.client.start_numpy_client("161.116.4.132z", client=ClassificationClient())
-#fl.client.start_numpy_client("84.88.186.195:8080", client=ClassificationClient())
+#fl.client.start_numpy_client("84.88.186.195:{CONFIG['port']}", client=ClassificationClient())
 
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())
 
 # cd BFP, then:
-# docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/$IMAGES_FOLDER -e data_loader_type=$DATA_LOADER_TYPE -e server=161.116.4.137:8080 bfp_docker
+# docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/$IMAGES_FOLDER -e data_loader_type=$DATA_LOADER_TYPE -e server=161.116.4.137:{CONFIG['port']} bfp_docker
 # or just:
-# docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images -e data_loader_type=optimam -e server=161.116.4.137:8080 bfp_docker
+# docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images -e data_loader_type=optimam -e server=161.116.4.137:{CONFIG['port']} bfp_docker

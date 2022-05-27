@@ -98,7 +98,6 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     landmarks_values = torch.load(HOME_PATH / LANDMARKS)
     apply_hist_stand_landmarks(image, landmarks_values)
 
-    
     # Images need to be same size. So pad with zeros after cropping. Maybe rescaling is better? Not sure.
     paddedimg = torch.zeros(3,224,224) # There are inconsistencies between datasets. So we negate the crop. Yeah we came full circle. What can you do.
     c,h,w = image.shape
@@ -176,7 +175,7 @@ class ALLDataset(): # Should work for any center
         # Data Split
         training_images = total_images[:int(0.8*len(total_images))]
         validation_images = total_images[int(0.8*len(total_images)):]
-        test_images = total_images[int(0.8*len(total_images)):]
+        # test_images = total_images[int(0.8*len(total_images)):]
 
         if mode == 'train':
             self.images = training_images

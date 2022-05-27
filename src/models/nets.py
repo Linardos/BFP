@@ -13,7 +13,7 @@ import torch.nn.functional as F
 #   config = yaml.safe_load(file)
 
 class ResNet18Classifier(nn.Sequential):
-    def __init__(self, pretrained, in_ch, out_ch, linear_ch, seed=None, early_layers_learning_rate=0):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
         '''
         in_ch = 1 or 3
         early_layers can be 'freeze' or 'lower_lr'
@@ -28,7 +28,7 @@ class ResNet18Classifier(nn.Sequential):
                 p.requires_grad = False
         elif early_layers_learning_rate:
             print(f"Early layers will use a learning rate of {early_layers_learning_rate}")
-        self.model.fc = nn.Linear(linear_ch, out_ch)
+        self.model.fc = nn.Linear(512, out_ch)
 
         if isinstance(self.model.fc, nn.Linear):
             torch.nn.init.xavier_uniform_(self.model.fc.weight)
