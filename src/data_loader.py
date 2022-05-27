@@ -101,12 +101,17 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     # Images need to be same size. So pad with zeros after cropping. Maybe rescaling is better? Not sure.
     paddedimg = torch.zeros(3,224,224) # There are inconsistencies between datasets. So we negate the crop. Yeah we came full circle. What can you do.
     c,h,w = image.shape
-    paddedimg[:,-h:,-w:]=image
+    if image[0][50][0] == 0:
+        paddedimg[:,-h:,-w:] = image
+    else:
+        paddedimg[:,:h,:w] = image
+
+    # paddedimg[:,-h:,-w:]=image
 
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
-    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=-1, center=None): 
+    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=-1, batch_size=10, center=None): 
         if data_loader_type == 'optimam':
             subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
                                 cropped_to_breast=True) # we should be able to load any dataset with this
