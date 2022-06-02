@@ -2,6 +2,8 @@
 # BFP
 
 ## Server side:
+In config.yaml change the 'docker' variable to True. (line 4)
+
 ```bash
 center_number = 1
 python server.py -c $center_number
