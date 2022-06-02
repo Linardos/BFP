@@ -67,15 +67,17 @@ def crop_MG(arr): # remove zeroes side
     return arr[[slice(*s) for s in slices]]
 
 def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
-    if image.status=='Malignant' or image.status=='Interval Cancer':
+    if image.status=='Malignant' or image.status=='Malign':
         label = np.single(1)
-    elif image.status=='Benign' or image.status=='Normal':
+    elif image.status=='Benign': 
         label = np.single(0)
+    else: #Add normal eventually
+        raiseError("Unknown status: {}".format(image.status))
     # label = np.single(1) if image.status=='Malignant' else np.single(0)
     # status = image.status # ['Benign', 'Malignant', 'Interval Cancer', 'Normal']
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
     # view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
-    # laterality = image.laterality # L R
+    laterality = image.laterality # L R
     if ".dcm" in image.path:
         # If this doesn't work. Check Lidia's https://gitlab.com/eucanimage/BreastCancer/-/blob/master/src/preprocessing/mmg_utils.py
         img_dcm = dicom.dcmread(image.path)
@@ -86,14 +88,21 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     scale_size = (rescale_height, rescale_width)
     if len(img_np.shape) > 2:
         img_np = img_np.transpose(2,0,1)[0] # remove redundant channel dimensions
+        # return img_np # Uncommment to omit preprocessing (for statistics purposes...)
     # CROP!
     img_np = crop_MG(img_np) # Works for CMMD.
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')
+    # rescaled_img = img_np # return image # CMMD dimensionality statistics required this
 
-    image = torch.from_numpy(rescaled_img).unsqueeze(0)
+    # if rescaled_img[50][0] == 0: # To eliminate laterality bias
+    if laterality == 'R' or laterality == 'RIGHT':
+        rescaled_img = np.fliplr(rescaled_img)
+
+    image = torch.from_numpy(rescaled_img.copy()).unsqueeze(0)
     image = image.repeat(3,1,1) # Convert to 3 channels just because for some reason there's no better solution yet. https://github.com/pytorch/vision/issues/1732
     
+    # return image # CMMD dimensionality statistics required this
     # Histogram Matching 
     landmarks_values = torch.load(HOME_PATH / LANDMARKS)
     apply_hist_stand_landmarks(image, landmarks_values)
@@ -101,10 +110,11 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     # Images need to be same size. So pad with zeros after cropping. Maybe rescaling is better? Not sure.
     paddedimg = torch.zeros(3,224,224) # There are inconsistencies between datasets. So we negate the crop. Yeah we came full circle. What can you do.
     c,h,w = image.shape
-    if image[0][50][0] == 0:
-        paddedimg[:,-h:,-w:] = image
-    else:
-        paddedimg[:,:h,:w] = image
+    # if image[0][50][0] == 0:
+    #     paddedimg[:,-h:,-w:] = image
+    # else:
+    #     paddedimg[:,:h,:w] = image
+    paddedimg[:,:h,:w] = image
 
     # paddedimg[:,-h:,-w:]=image
 

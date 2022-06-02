@@ -36,8 +36,11 @@ def import_class(name):
     return getattr(module, class_name)
 
 ### ====== Make Experiment Folder ====== ###
-path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Without Docker
-# path_to_experiments = Path("/") / Path(CONFIG['paths']['experiments']) # With Docker
+
+if CONFIG['docker']:
+    path_to_experiments = Path("/") / Path(CONFIG['paths']['experiments']) # With Docker
+else:
+    path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Without Docker
 
 if not os.path.exists(path_to_experiments):
     os.mkdir(path_to_experiments)
