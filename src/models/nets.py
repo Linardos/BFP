@@ -19,6 +19,7 @@ class ResNet18Classifier(nn.Sequential):
         early_layers can be 'freeze' or 'lower_lr'
         '''
         super(ResNet18Classifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.6.0', 'resnet18', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
 
@@ -49,6 +50,7 @@ class ResNet101Classifier(nn.Sequential):
         early_layers can be 'freeze' or 'lower_lr'
         '''
         super(ResNet101Classifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet101', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
         self.model.fc = nn.Linear(2048, out_ch)
@@ -72,6 +74,7 @@ class DenseNet121Classifier(nn.Sequential):
         early_layers can be 'freeze' or 'lower_lr'
         '''
         super(DenseNet121Classifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'densenet121', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
         self.model.fc = nn.Linear(2048, out_ch) # should adjust this
@@ -96,6 +99,7 @@ class AlexNetClassifier(nn.Sequential):
         early_layers can be 'freeze' or 'lower_lr'
         '''
         super(AlexNetClassifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.10.0', 'alexnet', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
         self.model.fc = nn.Linear(2048, out_ch) # should adjust this
@@ -119,6 +123,7 @@ class SqueezeNetClassifier(nn.Sequential):
         early_layers can be 'freeze' or 'lower_lr'
         '''
         super(SqueezeNetClassifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.6.0', 'squeezenet1_0', pretrained=True)
         self.model.classifier[1]=nn.Conv2d(linear_ch, out_ch, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
         if isinstance(self.model.classifier[1], nn.Conv2d):

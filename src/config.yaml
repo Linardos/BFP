@@ -1,6 +1,6 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
-name: '5centers_1epr30fr_BALANCED_ResNet18_Median_LateralityFixDOCKER' # use 4digit name tag to overwrite experiment with same parameters
+name: '5centers_1epr30fr_BALANCED_ResNet18_Median_LateralityFixThenFlipAgainTEST' # use 4digit name tag to overwrite experiment with same parameters
 docker: True
 port: 24144
 # Ports to use: 8080, 24144, 69016

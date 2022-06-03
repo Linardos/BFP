@@ -118,6 +118,10 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
 
     # paddedimg[:,-h:,-w:]=image
 
+    # Random Flip
+    if random.random() > 0.5:
+        paddedimg = paddedimg.flip(2)
+
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
