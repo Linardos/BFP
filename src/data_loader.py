@@ -6,6 +6,7 @@ import yaml
 import enum
 import copy
 import random
+random.seed(seed)
 import tempfile
 import warnings
 import multiprocessing
@@ -53,6 +54,20 @@ LANDMARKS = os.environ['landmarks']# CONFIG['paths']['landmarks']
 # Handle DICOMs:
 # "/home/kaisar/Datasets/InBreast/AllDICOMs"
 
+# To log the selected centers. Uncomment if you need to reinitialize the dicts to store the ids of the selected center images.
+# centralized_image_ids_dict = {'jarv':{'train':[], 'val':[]}, 'stge':{'train':[], 'val':[]}, 'inbreast':{'train':[], 'val':[]}, 'bcdr':{'train':[], 'val':[]}, 'cmmd':{'train':[], 'val':[]}}
+
+if not os.path.exists("image_ids.pkl") and CONFIG['simulation'] == False:
+    image_ids_dict = {'jarv':{'train':[], 'val':[]}, 'stge':{'train':[], 'val':[]}, 'inbreast':{'train':[], 'val':[]}, 'bcdr':{'train':[], 'val':[]}, 'cmmd':{'train':[], 'val':[]}}
+    with open("image_ids.pkl", 'wb') as handle: # To make sure they are the same
+        pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+# if not os.path.exists("federated_image_ids.pkl"):
+#     with open("federated_image_ids.pkl", 'wb') as handle:
+#         pickle.dump(federated_image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# with open("federated_image_ids.pkl", 'rb') as handle:
+#     federated_image_ids_dict = pickle.load(handle)
+
 def crop_MG(arr): # remove zeroes side
 
     mask = arr != 0
@@ -72,7 +87,8 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     elif image.status=='Benign': 
         label = np.single(0)
     else: #Add normal eventually
-        raiseError("Unknown status: {}".format(image.status))
+        raise ValueError("Unknown status: {}".format(image.status))
+
     # label = np.single(1) if image.status=='Malignant' else np.single(0)
     # status = image.status # ['Benign', 'Malignant', 'Interval Cancer', 'Normal']
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
@@ -96,8 +112,9 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     # rescaled_img = img_np # return image # CMMD dimensionality statistics required this
 
     # if rescaled_img[50][0] == 0: # To eliminate laterality bias
-    if laterality == 'R' or laterality == 'RIGHT':
-        rescaled_img = np.fliplr(rescaled_img)
+    if CONFIG['data']['flip']:
+        if laterality == 'R' or laterality == 'RIGHT':
+            rescaled_img = np.fliplr(rescaled_img)
 
     image = torch.from_numpy(rescaled_img.copy()).unsqueeze(0)
     image = image.repeat(3,1,1) # Convert to 3 channels just because for some reason there's no better solution yet. https://github.com/pytorch/vision/issues/1732
@@ -119,58 +136,83 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     # paddedimg[:,-h:,-w:]=image
 
     # Random Flip
-    if random.random() > 0.5:
-        paddedimg = paddedimg.flip(2)
+    if CONFIG['data']['flip']:
+        if random.random() > 0.5:
+            paddedimg = paddedimg.flip(2)
 
     return paddedimg, label
 
 class ALLDataset(): # Should work for any center
-    def __init__(self, dataset_path, csv_path, data_loader_type='optimam', mode='train', load_max=-1, batch_size=10, center=None): 
-        if data_loader_type == 'optimam':
-            subjects = OPTIMAMDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
-                                cropped_to_breast=True) # we should be able to load any dataset with this
-        elif data_loader_type == 'bcdr':
-            # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
-            csv_path = [os.path.join(csv_path,'cropped/BCDR-D01_dataset/dataset_info.csv'),
-                        os.path.join(csv_path,'cropped/BCDR-D02_dataset/dataset_info.csv'),
-                        os.path.join(csv_path,'cropped/BCDR-DN01_dataset/dataset_info.csv')]
-            dataset_path = [os.path.join(dataset_path,'cropped/BCDR-D01_dataset'),
-                            os.path.join(dataset_path,'cropped/BCDR-D02_dataset'),
-                            os.path.join(dataset_path,'cropped/BCDR-DN01_dataset')]
-            subjects = BCDRDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
-                                cropped_to_breast=True)
-        elif data_loader_type == 'inbreast':
-            # csv_path = '/home/lidia-garrucho/datasets/INBREAST/INbreast_updated_cropped_breast.csv'
-            # dataset_path = '/home/lidia-garrucho/datasets/INBREAST/AllPNG_cropped'
-            subjects = INBreastDataset(csv_path, dataset_path, detection=False, load_max=load_max, 
-                                cropped_to_breast=True)
-        elif data_loader_type == 'general' or 'cmmd':
-            subjects = CMMDDataset(csv_path, dataset_path, load_max=load_max)
+    def __init__(self, dataset_path, csv_path, data_loader_type='stge', mode='train', load_max=-1, batch_size=10): 
         
-        # subjects_selected = {}
-        if center!=None:
-            # In case the dataset is multi-centric
-            total_subjects = subjects.get_images_by_site(center)
-        # else:
-        #     # General case
-        #     subjects_selected['benign'] = subjects.get_clients_by_status('Benign')[:load_max] #Note that clients means subjects here.
-        #     subjects_selected['malignant'] = subjects.get_clients_by_status('Malignant')[:load_max]
-        #     subjects_selected['normal'] = subjects.get_clients_by_status('Normal')[:load_max]
-        #     if CONFIG['data']['balance']:
-        #         balance_to_min_index = min([len(subjects_selected['benign']), len(subjects_selected['malignant'])]) #, len(subjects_selected['normal'])])
-        #         subjects_selected['benign'] = subjects_selected['benign'][:balance_to_min_index]
-        #         subjects_selected['malignant'] = subjects_selected['malignant'][:balance_to_min_index]
-        #         # subjects_selected['normal'] = subjects_selected['normal'][:balance_to_min_index]
-        #         total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] # + subjects_selected['normal']
-        #         for status in ['benign', 'malignant']:
-        #             print(f'Total subjects selected by status ({status}): {len(subjects_selected[status])}')
-        #     else:
-        #         total_subjects = subjects_selected['benign'] + subjects_selected['malignant'] + subjects_selected['normal']
-        #         for status in ['normal', 'benign', 'malignant']:
-        #             print(f'Total subjects selected by status ({status}): {len(subjects_selected[status])}')
-        else:
+        # OPTIMAM(jarv)
+        jarv_csv_path="/home/akis-linardos/Datasets/OPTIMAM/jarv_info.csv"
+        jarv_dataset_path="/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images"
+
+        # OPTIMAM(stge)
+        stge_csv_path="/home/akis-linardos/Datasets/OPTIMAM/stge_info.csv"
+        stge_dataset_path="/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images"
+        subjects_stge = OPTIMAMDataset(stge_csv_path, stge_dataset_path, detection=False, load_max=load_max, 
+                            cropped_to_breast=True)
+
+        # BCDR
+        # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
+        bcdr_csv_path = [os.path.join('/home/lidia-garrucho/datasets/BCDR','cropped/BCDR-D01_dataset/dataset_info.csv'),
+                    os.path.join('/home/lidia-garrucho/datasets/BCDR','cropped/BCDR-D02_dataset/dataset_info.csv'),
+                    os.path.join('/home/lidia-garrucho/datasets/BCDR','cropped/BCDR-DN01_dataset/dataset_info.csv')]
+        bcdr_dataset_path = [os.path.join("/home/lidia-garrucho/datasets/BCDR",'cropped/BCDR-D01_dataset'),
+                        os.path.join("/home/lidia-garrucho/datasets/BCDR",'cropped/BCDR-D02_dataset'),
+                        os.path.join("/home/lidia-garrucho/datasets/BCDR",'cropped/BCDR-DN01_dataset')]
+
+        # InBreast
+        inbreast_csv_path = '/home/lidia-garrucho/datasets/INBREAST/INbreast_updated_cropped_breast.csv'
+        inbreast_dataset_path = '/home/lidia-garrucho/datasets/INBREAST/AllPNG_cropped'
+
+        # CMMD
+        cmmd_csv_path='/home/akis-linardos/Datasets/CMMD/info.csv'
+        cmmd_dataset_path='/home/akis-linardos/Datasets/CMMD'
+
+        if data_loader_type =='jarv':
+            subjects_jarv = OPTIMAMDataset(jarv_csv_path, jarv_dataset_path, detection=False, load_max=load_max, 
+                cropped_to_breast=True) # we should be able to load any dataset with this
+            subjects = subjects_jarv
+
+        if data_loader_type == 'stge':
+            subjects_stge = OPTIMAMDataset(stge_csv_path, stge_dataset_path, detection=False, load_max=load_max,
+                cropped_to_breast=True)
+            subjects = subjects_stge
+        elif data_loader_type == 'bcdr':
+            subjects_bcdr = BCDRDataset(bcdr_csv_path, bcdr_dataset_path, detection=False, load_max=load_max, 
+                cropped_to_breast=True)
+            subjects = subjects_bcdr
+        elif data_loader_type == 'inbreast':
+            subjects_inbreast = INBreastDataset(inbreast_csv_path, inbreast_dataset_path, detection=False, load_max=load_max, 
+                cropped_to_breast=True)
+            subjects = subjects_inbreast
+        elif data_loader_type == 'cmmd':
+            subjects_cmmd = CMMDDataset(cmmd_csv_path, cmmd_dataset_path, load_max=load_max)
+            subjects = subjects_cmmd
+        elif data_loader_type == 'general': # for unseen centers
+            subjects_general = CMMDDataset(csv_path, dataset_path, load_max=load_max)
+            subjects = subjects_general
+        elif data_loader_type == 'all': # For Centralized experiments
+            subjects_jarv = OPTIMAMDataset(jarv_csv_path, jarv_dataset_path, detection=False, load_max=load_max,
+                cropped_to_breast=True)
+            subjects_stge = OPTIMAMDataset(stge_csv_path, stge_dataset_path, detection=False, load_max=load_max,
+                cropped_to_breast=True)
+            subjects_bcdr = BCDRDataset(bcdr_csv_path, bcdr_dataset_path, detection=False, load_max=load_max,
+                cropped_to_breast=True)
+            subjects_inbreast = INBreastDataset(inbreast_csv_path, inbreast_dataset_path, detection=False, load_max=load_max,
+                cropped_to_breast=True)
+            subjects_cmmd = CMMDDataset(cmmd_csv_path, cmmd_dataset_path, load_max=load_max)
+            subjects = [subjects_jarv, subjects_stge, subjects_bcdr, subjects_inbreast, subjects_cmmd] # to balance each
+            subjects_center = ['jarv', 'stge', 'bcdr', 'inbreast', 'cmmd']
+            # subjects = subjects_stge + subjects_jarv + subjects_bcdr + subjects_inbreast + subjects_cmmd
+
+        # In the simulation we use the extracted IDs. Real world should use the other function still
+        def get_images_from_subjects_simulation(subjects_f, validation_image_id_list):
             images_benign, images_normal, images_malignant = [], [], []
-            for c in subjects:
+            for c in subjects_f:
                 for imlist, status in zip([images_normal, images_benign, images_malignant], ['Normal', 'Benign', 'Malignant']):
                     client_images_by_status = c.get_images_by_status(status=[status])
                     for image in client_images_by_status:
@@ -187,23 +229,100 @@ class ALLDataset(): # Should work for any center
                 total_images = images_benign + images_malignant + images_normal
                 for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
                     print(f'Total images selected by status ({status}): {len(ims)}')
-                        
-        
-        random.shuffle(total_images) 
-        
-        # Data Split
-        training_images = total_images[:int(0.8*len(total_images))]
-        validation_images = total_images[int(0.8*len(total_images)):]
-        # test_images = total_images[int(0.8*len(total_images)):]
+            # random.shuffle(total_images) 
+            # Data Split
+            images_to_use = []
+            if mode == 'train':
+                for image in total_images:
+                    if image.id not in validation_image_id_list:
+                        images_to_use.append(image)
+            elif mode == 'validation' or 'val':
+                for image in total_images:
+                    if image.id in validation_image_id_list:
+                        images_to_use.append(image)
+            # elif mode == 'test':
+            #     images_to_use = test_images
+            else:
+                raise ValueError(f'Mode: "{mode}" not recognized')
 
-        if mode == 'train':
-            self.images = training_images
-        elif mode == 'validation' or 'val':
-            self.images = validation_images
-        elif mode == 'test':
-            self.images = test_images
+            img_ids = (mode, [image.id for image in images_to_use])
+
+            return images_to_use
+        
+        def get_images_from_subjects(subjects_f):
+            images_benign, images_normal, images_malignant = [], [], []
+            for c in subjects_f:
+                for imlist, status in zip([images_normal, images_benign, images_malignant], ['Normal', 'Benign', 'Malignant']):
+                    client_images_by_status = c.get_images_by_status(status=[status])
+                    for image in client_images_by_status:
+                        imlist.append(image)
+            if CONFIG['data']['balance']:
+                # Balance the dataset
+                balance_to_min_index = min([len(images_benign), len(images_malignant)])
+                images_benign = images_benign[:balance_to_min_index]
+                images_malignant = images_malignant[:balance_to_min_index]
+                total_images = images_benign + images_malignant
+                for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
+                    print(f'Total images selected by status ({status}): {len(ims)}')
+            else:
+                total_images = images_benign + images_malignant + images_normal
+                for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
+                    print(f'Total images selected by status ({status}): {len(ims)}')
+            random.shuffle(total_images) 
+            # Data Split
+            training_images = total_images[:int(0.8*len(total_images))]
+            validation_images = total_images[int(0.8*len(total_images)):]
+            # test_images = total_images[int(0.8*len(total_images)):]
+
+            if mode == 'train':
+                images_to_use = training_images
+            elif mode == 'validation' or 'val':
+                images_to_use = validation_images
+            elif mode == 'test':
+                images_to_use = test_images
+            else:
+                raise ValueError(f'Mode: "{mode}" not recognized')
+
+            img_ids = [image.id for image in images_to_use]
+
+            return images_to_use, img_ids
+              
+        self.data_loader_type = data_loader_type
+
+        if CONFIG['simulation']==True:
+
+            if data_loader_type == 'all': # CDS
+                
+                with open('federated_image_ids.pkl', 'rb') as handle:
+                    image_ids_dict = pickle.load(handle)
+
+                self.images = []
+                for i, s in enumerate(subjects):
+                    images_to_use = get_images_from_subjects(s) #, image_ids_dict[subjects_center[i]]['val'][1])
+                    
+                    images_with_center = [(img,subjects_center[i]) for img in images_to_use]
+                    self.images = self.images+images_with_center
+                    # centralized_image_ids_dict[subjects_center[i]][mode] = img_ids
+                    
+            else:
+                
+                with open('federated_image_ids.pkl', 'rb') as handle:
+                    image_ids_dict = pickle.load(handle)
+
+                self.images = get_images_from_subjects(subjects) #, image_ids_dict[data_loader_type]['val'][1])
+                # federated_image_ids_dict[data_loader_type][mode] = img_ids
+        
         else:
-            raise ValueError(f'Mode: "{mode}" not recognized')
+            with open("image_ids.pkl", 'rb') as handle:
+                image_ids_dict = pickle.load(handle)
+            self.images, image_ids = get_images_from_subjects(subjects)
+            image_ids_dict[data_loader_type][mode] = image_ids
+            with open("image_ids.pkl", 'wb') as handle:
+                pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+            # with open('federated_image_ids.pkl', 'wb') as handle:
+            #     pickle.dump(federated_image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # training_subjects = total_subjects[:int(len(total_subjects)*0.8)]
         # validation_subjects = total_subjects[int(len(total_subjects)*0.8):int(len(total_subjects)*0.9)]
@@ -230,10 +349,23 @@ class ALLDataset(): # Should work for any center
         return len(self.images)
 
     def __getitem__(self, idx):
-        if isinstance(idx, slice):
-            # do your handling for a slice object:
-            return [preprocess_one_image_OPTIMAM(image) for image in self.images[idx]]
+        
+        if self.data_loader_type == 'all':
+            if isinstance(idx, slice):
+                # do your handling for a slice object:
+                return [(preprocess_one_image_OPTIMAM(image), center) for image, center in self.images[idx]]
+            else:
+                # Do your handling for a plain index
+                image, center = self.images[idx]
+                return (preprocess_one_image_OPTIMAM(image), center)
+
         else:
-            # Do your handling for a plain index
-            image = self.images[idx]
-            return preprocess_one_image_OPTIMAM(image)
+            if isinstance(idx, slice):
+                # do your handling for a slice object:
+                return [preprocess_one_image_OPTIMAM(image) for image in self.images[idx]]
+            else:
+                # Do your handling for a plain index
+                image = self.images[idx]
+                return preprocess_one_image_OPTIMAM(image)
+
+

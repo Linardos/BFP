@@ -2,7 +2,7 @@
 # BFP
 
 ## Server side:
-In config.yaml change the 'docker' variable to True. (line 4)
+In config.yaml change the 'docker' variable to True and the 'simulation' variable to False. (lines 4 and 5)
 
 ```bash
 center_number = 1

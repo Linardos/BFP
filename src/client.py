@@ -18,7 +18,7 @@ from tqdm import tqdm
 import numpy as np
 from pathlib import Path
 import pickle
-# from sklearn import roc_auc_score
+from sklearn.metrics import roc_auc_score
 # import argparse
 
 
@@ -102,10 +102,10 @@ os.makedirs(LOG_PATH, exist_ok=True)
 # Global Model Aggregated Metrics : GMAM
 
 log_dict = {'local_loss':{0:[]}, 'GMLD_val_loss':{0:[]}, 'LMLD_val_loss':{0:[]}, 'local_accuracy':[], 'local_sensitivity':[], 'local_specificity':[], 'local_val_predictions':[],
-            'GMLD_accuracy':[], 'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[],
-            'LMLD_train_accuracy':[], 'LMLD_val_accuracy':[],
+            'LMLD_val_outputs':[], 'LMLD_val_labels':[], 'GMLD_outputs':[], 'GMLD_labels':[],
+            'GMLD_accuracy':[], 'GMLD_true_positives':[],'GMLD_false_positives':[],'GMLD_false_negatives':[],'GMLD_true_negatives':[], 'GMLD_AUC':[],
             'LMLD_train_true_positives':[], 'LMLD_train_false_positives':[], 'LMLD_train_false_negatives':[], 'LMLD_train_true_negatives':[],
-            'LMLD_val_true_positives':[], 'LMLD_val_false_positives':[], 'LMLD_val_false_negatives':[], 'LMLD_val_true_negatives':[],}
+            'LMLD_val_true_positives':[], 'LMLD_val_false_positives':[], 'LMLD_val_false_negatives':[], 'LMLD_val_true_negatives':[],'LMLD_val_AUC':[],}
 with open(LOG_PATH / "log.pkl", 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -117,8 +117,8 @@ SERVER= os.getenv('server',f"161.116.4.132:{CONFIG['port']}")
 DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
 
 # Docker ip is: 172.17.0.3
-print(f'Here dataset path {DATASET_PATH}')
-print(f'Here csv path {CSV_PATH}')
+# print(f'Here dataset path {DATASET_PATH}')
+# print(f'Here csv path {CSV_PATH}')
 
 # parser = argparse.ArgumentParser(description='Process some integers.')
 # # parser.add_argument('-c', '--csv', help='path to csv', default=CONFIG['paths']['csv_path'])
@@ -135,7 +135,7 @@ def load_data():
     print('Loading data...')
     training_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='train', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     validation_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='val', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
-    test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='test', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+    # test_loader = DataLoader(ALLDataset(DATASET_PATH, CSV_PATH, mode='test', data_loader_type=DATA_LOADER_TYPE, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
     print(len(training_loader))
     return training_loader, validation_loader #test_loader
 
@@ -153,73 +153,122 @@ def train(net, training_loader, validation_loader, criterion):
     log_dict['local_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
     for _ in range(CONFIG['hyperparameters']['epochs_per_round']):
         for i, batch in enumerate(tqdm(training_loader)):
-            images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+            if DATA_LOADER_TYPE == 'all':
+                images, labels, center = batch[0][0].to(DEVICE), batch[0][1].to(DEVICE).unsqueeze(1), batch[1][0]
+            else:
+                images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             optimizer.zero_grad()
             loss = criterion(net(images), labels)
             cumulative_loss += loss.item()
             loss.backward()
             optimizer.step()
 
+
         log_dict['local_loss'][current_round_num].append(loss.item())
 
     # FOR SANITY CHECK, REMOVE LATER:
-    correct, total, cumulative_loss = 0, 0, 0.0
-    false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
-    for i, batch in enumerate(tqdm(training_loader)):
-        images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
-        outputs = net(images)
-        loss = criterion(outputs, labels).item()
-        #
-        cumulative_loss += criterion(outputs, labels).item()
-        predicted = probabilities_to_labels(outputs.data)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        false_positive += ((predicted == 1) & (labels == 0)).sum().item()
-        false_negative += ((predicted == 0) & (labels == 1)).sum().item()
-        true_positive += ((predicted == 1) & (labels == 1)).sum().item()
-        true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+    # correct, total, cumulative_loss = 0, 0, 0.0
+    # false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
+    # for i, batch in enumerate(tqdm(training_loader)):
+    #     if DATA_LOADER_TYPE == 'all':
+    #         inputs, labels, center = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1), batch[2].to(DEVICE)
+    #     else:
+    #         images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+    #     outputs = net(images)
+    #     loss = criterion(outputs, labels).item()
+    #     #
+    #     cumulative_loss += criterion(outputs, labels).item()
+    #     predicted = probabilities_to_labels(outputs.data)
+    #     total += labels.size(0)
+    #     correct += (predicted == labels).sum().item()
+    #     false_positive += ((predicted == 1) & (labels == 0)).sum().item()
+    #     false_negative += ((predicted == 0) & (labels == 1)).sum().item()
+    #     true_positive += ((predicted == 1) & (labels == 1)).sum().item()
+    #     true_negative += ((predicted == 0) & (labels == 0)).sum().item()
 
-    accuracy = correct / total
-    # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
-    # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
-    # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
-    log_dict['LMLD_train_accuracy'].append(accuracy)
-    # Store everything!
-    log_dict['LMLD_train_true_positives'].append(true_positive)
-    log_dict['LMLD_train_false_positives'].append(false_positive)
-    log_dict['LMLD_train_true_negatives'].append(true_negative)
-    log_dict['LMLD_train_false_negatives'].append(false_negative)
+    # accuracy = correct / total
+    # # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
+    # # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
+    # # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
+    # log_dict['LMLD_train_accuracy'].append(accuracy)
+    # # Store everything!
+    # log_dict['LMLD_train_true_positives'].append(true_positive)
+    # log_dict['LMLD_train_false_positives'].append(false_positive)
+    # log_dict['LMLD_train_true_negatives'].append(true_negative)
+    # log_dict['LMLD_train_false_negatives'].append(false_negative)
     
-    current_epoch_num=list(log_dict['LMLD_val_loss'].keys())[-1]
-    next_epoch_num=current_epoch_num+1
-    log_dict['LMLD_val_loss'][next_epoch_num]=[] # A key for the next round is generated. Final round will always remain empty
-    correct, total, cumulative_loss = 0, 0, 0.0
-    false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
-    for i, batch in enumerate(tqdm(validation_loader)):
-        images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
-        outputs = net(images)
-        loss = criterion(outputs, labels).item()
-        #
-        cumulative_loss += criterion(outputs, labels).item()
-        predicted = probabilities_to_labels(outputs.data)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        false_positive += ((predicted == 1) & (labels == 0)).sum().item()
-        false_negative += ((predicted == 0) & (labels == 1)).sum().item()
-        true_positive += ((predicted == 1) & (labels == 1)).sum().item()
-        true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+    
+    if DATA_LOADER_TYPE == 'all': #Only this validation matters in CDS. the test function is for aggregation
+
+        current_epoch_num=list(log_dict['LMLD_val_loss'].keys())[-1]
+        next_epoch_num=current_epoch_num+1
+        log_dict['LMLD_val_loss'][next_epoch_num]=[] # A key for the next round is generated. Final round will always remain empty
+        correct, total, cumulative_loss = 0, 0, 0.0
+        false_positive, false_negative, true_positive, true_negative = {'jarv':0, 'stge':0, 'inbreast':0, 'bcdr':0, 'cmmd':0}, {'jarv':0, 'stge':0, 'inbreast':0, 'bcdr':0, 'cmmd':0}, {'jarv':0, 'stge':0, 'inbreast':0, 'bcdr':0, 'cmmd':0}, {'jarv':0, 'stge':0, 'inbreast':0, 'bcdr':0, 'cmmd':0}
+        total_labels, total_outputs = {'jarv':[],'stge':[],'inbreast':[],'bcdr':[],'cmmd':[]}, {'jarv':[],'stge':[],'inbreast':[],'bcdr':[],'cmmd':[]}
+        for i, batch in enumerate(tqdm(validation_loader)):
+            images, labels, center = batch[0][0].to(DEVICE), batch[0][1].to(DEVICE).unsqueeze(1), batch[1][0]
+            outputs = net(images)
+            loss = criterion(outputs, labels).item()
+            #
+            cumulative_loss += criterion(outputs, labels).item()
+            predicted = probabilities_to_labels(outputs.data)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            false_positive[center] += ((predicted == 1) & (labels == 0)).sum().item()
+            false_negative[center] += ((predicted == 0) & (labels == 1)).sum().item()
+            true_positive[center] += ((predicted == 1) & (labels == 1)).sum().item()
+            true_negative[center] += ((predicted == 0) & (labels == 0)).sum().item()
+            total_labels[center].append(labels.cpu().detach().numpy())
+            total_outputs[center].append(outputs.cpu().detach().numpy())
+
+
+        AUC_score = {}
+        for center in ['jarv','stge','inbreast','bcdr','cmmd']:
+            tl = np.concatenate(total_labels[center])
+            to = np.concatenate(total_outputs[center])
+            AUC_score[center] = roc_auc_score(tl, to)
+
+    else:
+
+        current_epoch_num=list(log_dict['LMLD_val_loss'].keys())[-1]
+        next_epoch_num=current_epoch_num+1
+        log_dict['LMLD_val_loss'][next_epoch_num]=[] # A key for the next round is generated. Final round will always remain empty
+        correct, total, cumulative_loss = 0, 0, 0.0
+        false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
+        total_labels, total_outputs = [], []
+        for i, batch in enumerate(tqdm(validation_loader)):
+            images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+            outputs = net(images)
+            loss = criterion(outputs, labels).item()
+            #
+            cumulative_loss += criterion(outputs, labels).item()
+            predicted = probabilities_to_labels(outputs.data)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            false_positive += ((predicted == 1) & (labels == 0)).sum().item()
+            false_negative += ((predicted == 0) & (labels == 1)).sum().item()
+            true_positive += ((predicted == 1) & (labels == 1)).sum().item()
+            true_negative += ((predicted == 0) & (labels == 0)).sum().item()
+
+            total_labels += labels.cpu().detach().numpy().tolist()
+            total_outputs += outputs.cpu().detach().numpy().tolist()
+        AUC_score = roc_auc_score(total_labels, total_outputs)
+
     log_dict['LMLD_val_loss'][current_epoch_num].append(loss)
 
     accuracy = correct / total
     # sensitivity = true_positive.sum().item() / (true_positive.sum().item() + false_negative.sum().item())
     # specificity = true_negative.sum().item() / (true_negative.sum().item() + false_positive.sum().item())
     # AUC = roc_auc_score(labels.detach().numpy(), outputs.detach().numpy())
-    log_dict['LMLD_val_accuracy'].append(accuracy)
     # Store everything!
     log_dict['LMLD_val_true_positives'].append(true_positive)
     log_dict['LMLD_val_false_positives'].append(false_positive)
     log_dict['LMLD_val_true_negatives'].append(true_negative)
     log_dict['LMLD_val_false_negatives'].append(false_negative)
+    log_dict['LMLD_val_AUC'].append(AUC_score)
+    log_dict['LMLD_val_outputs'].append(total_outputs)
+    log_dict['LMLD_val_labels'].append(total_labels)
     ####  
 
     # print(log_dict)
@@ -249,9 +298,13 @@ def test(net, validation_loader, criterion):
     current_round_num=list(log_dict['GMLD_val_loss'].keys())[-1]
     next_round_num=current_round_num+1
     log_dict['GMLD_val_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
+    total_labels, total_outputs = [], []
     with torch.no_grad():
         for i, batch in enumerate(tqdm(validation_loader)):
-            images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+            if DATA_LOADER_TYPE == 'all':
+                images, labels, center = batch[0][0].to(DEVICE), batch[0][1].to(DEVICE).unsqueeze(1), batch[1][0]
+            else:
+                images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             outputs = net(images)
             loss = criterion(outputs, labels).item()
             # 
@@ -265,6 +318,11 @@ def test(net, validation_loader, criterion):
             true_negative += ((predicted == 0) & (labels == 0)).sum().item()
             # predictions.append(predicted)
             val_losses.append(loss)
+            total_labels += labels.cpu().detach().numpy().tolist()
+            total_outputs += outputs.cpu().detach().numpy().tolist()
+
+    AUC_score = roc_auc_score(total_labels, total_outputs)
+
     val_loss=sum(val_losses)/len(val_losses)
     log_dict['GMLD_val_loss'][current_round_num]=val_loss
     accuracy = correct / total
@@ -279,6 +337,9 @@ def test(net, validation_loader, criterion):
     log_dict['GMLD_false_positives'].append(false_positive)
     log_dict['GMLD_true_negatives'].append(true_negative)
     log_dict['GMLD_false_negatives'].append(false_negative)
+    log_dict['GMLD_AUC'].append(AUC_score)
+    log_dict['GMLD_outputs'].append(total_outputs)
+    log_dict['GMLD_labels'].append(total_labels)
 
     loss = cumulative_loss / total
     print(accuracy)
@@ -289,8 +350,6 @@ def test(net, validation_loader, criterion):
     # test_results = (loss, accuracy, bytes(predictions))
     test_results = (loss, accuracy)
     return test_results
-
-
 
 class ClassificationClient(fl.client.NumPyClient):
     def __init__(self):
@@ -341,3 +400,5 @@ fl.client.start_numpy_client(SERVER, client=ClassificationClient())
 # docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/$IMAGES_FOLDER -e data_loader_type=$DATA_LOADER_TYPE -e server=161.116.4.137:{CONFIG['port']} bfp_docker
 # or just:
 # docker run -it -v $DATA_PATH:/BFP/dataset -v /home/akis-linardos/BFP/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e dataset_path=/BFP/dataset/images -e data_loader_type=optimam -e server=161.116.4.137:{CONFIG['port']} bfp_docker
+
+
