@@ -106,7 +106,7 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
         img_np = img_np.transpose(2,0,1)[0] # remove redundant channel dimensions
         # return img_np # Uncommment to omit preprocessing (for statistics purposes...)
     # CROP!
-    img_np = crop_MG(img_np) # Works for CMMD.
+    img_np = crop_MG(img_np) # This is for CMMD. Doesn't harm if the image is already cropped.
     img_np = np.uint8(img_np) if img_np.dtype != np.uint8 else img_np.copy()
     rescaled_img, scale_factor = imrescale(img_np, scale_size, return_scale=True, backend='pillow')
     # rescaled_img = img_np # return image # CMMD dimensionality statistics required this
@@ -152,8 +152,6 @@ class ALLDataset(): # Should work for any center
         # OPTIMAM(stge)
         stge_csv_path="/home/akis-linardos/Datasets/OPTIMAM/stge_info.csv"
         stge_dataset_path="/home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images"
-        subjects_stge = OPTIMAMDataset(stge_csv_path, stge_dataset_path, detection=False, load_max=load_max, 
-                            cropped_to_breast=True)
 
         # BCDR
         # root path is '/home/lidia-garrucho/datasets/BCDR/cropped/ in both cases
@@ -177,7 +175,7 @@ class ALLDataset(): # Should work for any center
                 cropped_to_breast=True) # we should be able to load any dataset with this
             subjects = subjects_jarv
 
-        if data_loader_type == 'stge':
+        elif data_loader_type == 'stge':
             subjects_stge = OPTIMAMDataset(stge_csv_path, stge_dataset_path, detection=False, load_max=load_max,
                 cropped_to_breast=True)
             subjects = subjects_stge
@@ -246,6 +244,7 @@ class ALLDataset(): # Should work for any center
                 raise ValueError(f'Mode: "{mode}" not recognized')
 
             img_ids = (mode, [image.id for image in images_to_use])
+            random.shuffle(images_to_use)
 
             return images_to_use
         
@@ -293,12 +292,12 @@ class ALLDataset(): # Should work for any center
 
             if data_loader_type == 'all': # CDS
                 
-                with open('federated_image_ids.pkl', 'rb') as handle:
+                with open('image_ids.pkl', 'rb') as handle:
                     image_ids_dict = pickle.load(handle)
 
                 self.images = []
                 for i, s in enumerate(subjects):
-                    images_to_use = get_images_from_subjects(s) #, image_ids_dict[subjects_center[i]]['val'][1])
+                    images_to_use = get_images_from_subjects_simulation(s, image_ids_dict[subjects_center[i]]['val'])
                     
                     images_with_center = [(img,subjects_center[i]) for img in images_to_use]
                     self.images = self.images+images_with_center
@@ -306,10 +305,10 @@ class ALLDataset(): # Should work for any center
                     
             else:
                 
-                with open('federated_image_ids.pkl', 'rb') as handle:
+                with open('image_ids.pkl', 'rb') as handle:
                     image_ids_dict = pickle.load(handle)
 
-                self.images = get_images_from_subjects(subjects) #, image_ids_dict[data_loader_type]['val'][1])
+                self.images = get_images_from_subjects_simulation(subjects , image_ids_dict[data_loader_type]['val'])
                 # federated_image_ids_dict[data_loader_type][mode] = img_ids
         
         else:
@@ -319,7 +318,6 @@ class ALLDataset(): # Should work for any center
             image_ids_dict[data_loader_type][mode] = image_ids
             with open("image_ids.pkl", 'wb') as handle:
                 pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
 
             # with open('federated_image_ids.pkl', 'wb') as handle:
             #     pickle.dump(federated_image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
