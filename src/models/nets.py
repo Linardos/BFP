@@ -6,6 +6,8 @@ import torch
 import torchvision
 from torch import nn
 import torch.nn.functional as F
+
+torch.manual_seed(42)
 # cpath = Path().absolute().joinpath('config.yaml')
 # print(cpath)
 # config_file = Path(cpath)

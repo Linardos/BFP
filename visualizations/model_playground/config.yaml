@@ -1,9 +1,8 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
-name: 'CDS_BALANCED_ResNet18_LateralityFixThenFlipAgain' # use 4digit name tag to overwrite experiment with same parameters
+name: '5centers_1epr30fr_BALANCED_AlexNetClassifier_Median_LateralityFixThenFlipAgain' # use 4digit name tag to overwrite experiment with same parameters
 docker: False
-simulation: False
-port: 69016
+port: 24144
 # Ports to use: 8080, 24144, 69016
 # test_unseen: False # this will turn off train mode and test on a specified center
 strategy:
@@ -11,11 +10,11 @@ strategy:
     # min_fit_clients: 2
     # min_eval_clients: 2
     CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
-    aggregator: aggregator.FedAvg
+    aggregator: aggregator.FedMedian
     # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
-    federated_rounds: 1
-    epochs_per_round : 30 # 
+    federated_rounds: 30
+    epochs_per_round : 1 # 
     batch_size : 10  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
     lr : 0.01
@@ -27,7 +26,7 @@ hyperparameters:
 model:
     # The model name used here will generate a new experiment in the ~/mnm/experiments
     arch:
-        function: models.nets.ResNet18Classifier
+        function: models.nets.AlexNetClassifier #ResNet18Classifier
         args: #keyword arguments for function
             pretrained: True
             in_ch: 1
@@ -41,7 +40,6 @@ data:
     labels: [0,1]
     load_max: -1 # -1 means load all
     balance: True
-    flip: True
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:

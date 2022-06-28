@@ -208,7 +208,7 @@ class ALLDataset(): # Should work for any center
             # subjects = subjects_stge + subjects_jarv + subjects_bcdr + subjects_inbreast + subjects_cmmd
 
         # In the simulation we use the extracted IDs. Real world should use the other function still
-        def get_images_from_subjects_simulation(subjects_f, validation_image_id_list):
+        def get_images_from_subjects_simulation(subjects_f, image_id_list):
             images_benign, images_normal, images_malignant = [], [], []
             for c in subjects_f:
                 for imlist, status in zip([images_normal, images_benign, images_malignant], ['Normal', 'Benign', 'Malignant']):
@@ -230,19 +230,18 @@ class ALLDataset(): # Should work for any center
             # random.shuffle(total_images) 
             # Data Split
             images_to_use = []
-            if mode == 'train':
-                for image in total_images:
-                    if image.id not in validation_image_id_list:
-                        images_to_use.append(image)
-            elif mode == 'validation' or 'val':
-                for image in total_images:
-                    if image.id in validation_image_id_list:
-                        images_to_use.append(image)
-            # elif mode == 'test':
-            #     images_to_use = test_images
-            else:
-                raise ValueError(f'Mode: "{mode}" not recognized')
+            # if mode == 'train':
+            #     for image in total_images:
+            #         if image.id not in validation_image_id_list:
+            #             images_to_use.append(image)
+            # elif mode == 'validation' or 'val':
+            #     for image in total_images:
+            #         if image.id in validation_image_id_list:
+            #             images_to_use.append(image)
 
+            for image in total_images:
+                if image.id in image_id_list:
+                    images_to_use.append(image)
             img_ids = (mode, [image.id for image in images_to_use])
             random.shuffle(images_to_use)
 
@@ -297,7 +296,12 @@ class ALLDataset(): # Should work for any center
 
                 self.images = []
                 for i, s in enumerate(subjects):
-                    images_to_use = get_images_from_subjects_simulation(s, image_ids_dict[subjects_center[i]]['val'])
+                    # images_to_use = get_images_from_subjects(s)[0] #_simulation(s, image_ids_dict[subjects_center[i]]['val'])
+
+                    if mode == 'train':
+                        images_to_use = get_images_from_subjects_simulation(s, image_ids_dict[subjects_center[i]]['train'])
+                    elif mode == 'validation' or 'val':
+                        images_to_use = get_images_from_subjects_simulation(s, image_ids_dict[subjects_center[i]]['val'])
                     
                     images_with_center = [(img,subjects_center[i]) for img in images_to_use]
                     self.images = self.images+images_with_center
@@ -308,16 +312,21 @@ class ALLDataset(): # Should work for any center
                 with open('image_ids.pkl', 'rb') as handle:
                     image_ids_dict = pickle.load(handle)
 
-                self.images = get_images_from_subjects_simulation(subjects , image_ids_dict[data_loader_type]['val'])
+                if mode == 'train':
+                    self.images = get_images_from_subjects_simulation(subjects, image_ids_dict[data_loader_type]['train'])
+                elif mode == 'validation' or 'val':
+                    self.images = get_images_from_subjects_simulation(subjects, image_ids_dict[data_loader_type]['val'])
+
+                # self.images = get_images_from_subjects(subjects)[0] #_simulation(subjects, image_ids_dict[data_loader_type]['val'])
                 # federated_image_ids_dict[data_loader_type][mode] = img_ids
         
         else:
-            with open("image_ids.pkl", 'rb') as handle:
-                image_ids_dict = pickle.load(handle)
+            # with open("image_ids.pkl", 'rb') as handle:
+            #     image_ids_dict = pickle.load(handle)
             self.images, image_ids = get_images_from_subjects(subjects)
             image_ids_dict[data_loader_type][mode] = image_ids
-            with open("image_ids.pkl", 'wb') as handle:
-                pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            # with open("image_ids.pkl", 'wb') as handle:
+            #     pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
             # with open('federated_image_ids.pkl', 'wb') as handle:
             #     pickle.dump(federated_image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
