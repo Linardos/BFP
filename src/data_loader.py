@@ -139,6 +139,13 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     if CONFIG['data']['flip']:
         if random.random() > 0.5:
             paddedimg = paddedimg.flip(2)
+    
+    # if CONFIG['data']['rotate']:
+    #     if random.random() > 0.5:
+    #         if random.random() > 0.5:
+    #             paddedimg = np.rot90(paddedimg,k=1)
+    #         else:
+    #             paddedimg = np.rot90(paddedimg,k=3)
 
     return paddedimg, label
 
@@ -324,7 +331,8 @@ class ALLDataset(): # Should work for any center
             # with open("image_ids.pkl", 'rb') as handle:
             #     image_ids_dict = pickle.load(handle)
             self.images, image_ids = get_images_from_subjects(subjects)
-            image_ids_dict[data_loader_type][mode] = image_ids
+            
+            # image_ids_dict[data_loader_type][mode] = image_ids
             # with open("image_ids.pkl", 'wb') as handle:
             #     pickle.dump(image_ids_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
