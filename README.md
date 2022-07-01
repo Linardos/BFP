@@ -26,7 +26,7 @@ docker pull registry.gitlab.bsc.es/bfp/fl_breast_mg_classification
 git clone https://github.com/Linardos/BFP.git 
 cd BFP
 ```
-## Run client with CMMD subset. (To run on your own data simply change the data_Path)
+## Run client with CMMD subset. (To run on your own data simply change the DATA_PATH)
 CMMD SUBSET:
 ```bash
 DATA_PATH=/home/akis-linardos/Datasets/CMMD_subset
@@ -38,7 +38,7 @@ docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/
 ```
 
 
-#### Simulations (Don't read below this point.)
+## Simulations (Ignore below this point.)
 
 ## Run FD client (OPTIMAM)
 Defining the environmental variables and running the client.
