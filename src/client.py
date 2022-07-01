@@ -112,8 +112,8 @@ with open(LOG_PATH / "log.pkl", 'wb') as handle:
 # SERVER=os.environ['server']
 # SERVER = "161.116.4.132:{CONFIG['port']}" # server without docker at BCN-AIM cluster
 # SERVER= os.getenv('server',"[::]:{CONFIG['port']}")
-os.environ['server'] = f"161.116.4.132:{CONFIG['port']}"
-SERVER= os.getenv('server',f"161.116.4.132:{CONFIG['port']}") 
+# os.environ['server'] = f"161.116.4.132:{CONFIG['port']}"
+SERVER= os.getenv('server',f"161.116.4.132:{CONFIG['port']}")
 DATA_LOADER_TYPE= os.getenv('data_loader_type',"optimam") #env variable data_loader if not given default to optimam type dataloading
 
 # Docker ip is: 172.17.0.3
@@ -394,6 +394,7 @@ class ClassificationClient(fl.client.NumPyClient):
 # fl.client.start_numpy_client("161.116.4.132z", client=ClassificationClient())
 #fl.client.start_numpy_client("84.88.186.195:{CONFIG['port']}", client=ClassificationClient())
 
+print("Connecting to server: {}".format(SERVER))
 fl.client.start_numpy_client(SERVER, client=ClassificationClient())
 
 # cd BFP, then:

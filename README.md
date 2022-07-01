@@ -34,5 +34,4 @@ CSV_FILENAME=info.csv
 DATA_LOADER_TYPE=general
 
 docker run -it -v $DATA_PATH:/BFP/dataset -v $PWD/src:/BFP/src -e csv_path=/BFP/dataset/$CSV_FILENAME -e data_loader_type=$DATA_LOADER_TYPE -e dataset_path=/BFP/dataset/ -e server=84.88.186.195:8080 -e client_log_path=/BFP/src/client_logs -e NVIDIA_VISIBLE_DEVICES=2 --runtime=nvidia -e NVIDIA_DRIVER_CAPABILITIES=compute,utility registry.gitlab.bsc.es/bfp/fl_breast_mg_classification
-
 ```
