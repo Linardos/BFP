@@ -702,7 +702,7 @@ class CMMDDataset(DatasetMMG):
                             if image_name not in image_ids:
                                 continue
                         # Create new image
-                        scan_png_path = image_group.scan_path.values[0] #.replace('nii.gz', 'png')
+                        scan_png_path = image_group.image_filepath.values[0] #.replace('nii.gz', 'png')
                         scan_path = os.path.join(dataset_path, scan_png_path)
                         
                         new_image = CMMDImage(scan_path)

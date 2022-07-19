@@ -3,6 +3,7 @@
 
 ## Server side:
 In config.yaml change the 'docker' variable to True and the 'simulation' variable to False. (lines 4 and 5)
+Make sure continue_from_checkpoint is set to False unless you want to load parameters from a pretrained model. (line 60)
 
 ```bash
 center_number = 1

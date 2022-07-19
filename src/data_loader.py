@@ -140,12 +140,12 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
         if random.random() > 0.5:
             paddedimg = paddedimg.flip(2)
     
-    # if CONFIG['data']['rotate']:
-    #     if random.random() > 0.5:
-    #         if random.random() > 0.5:
-    #             paddedimg = np.rot90(paddedimg,k=1)
-    #         else:
-    #             paddedimg = np.rot90(paddedimg,k=3)
+    if CONFIG['data']['rotate']:
+        if random.random() > 0.5:
+            if random.random() > 0.5:
+                paddedimg = np.rot90(paddedimg,k=1)
+            else:
+                paddedimg = np.rot90(paddedimg,k=3)
 
     return paddedimg, label
 
@@ -382,5 +382,3 @@ class ALLDataset(): # Should work for any center
                 # Do your handling for a plain index
                 image = self.images[idx]
                 return preprocess_one_image_OPTIMAM(image)
-
-

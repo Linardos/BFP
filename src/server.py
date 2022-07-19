@@ -37,10 +37,7 @@ def import_class(name):
 
 ### ====== Make Experiment Folder ====== ###
 
-path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Without Docker
-
-# else:
-# path_to_experiments = Path("/") / Path(CONFIG['paths']['experiments']) # With Docker
+path_to_experiments = HOME_PATH / Path(CONFIG['paths']['experiments']) # Server script doesn't use Docker so it's fine.
 
 if not os.path.exists(path_to_experiments):
     os.mkdir(path_to_experiments)
@@ -108,6 +105,19 @@ if CONFIG['model']['arch']['args']:
     net = Model(**CONFIG['model']['arch']['args'])
 else:
     net = Model()
+
+### ====== Load previous Checkpoint (Under Development) ====== ###
+# def load_parameters_from_disk():
+if CONFIG['paths']['continue_from_checkpoint']:
+    # import Net
+    list_of_files = [fname for fname in glob.glob(CONFIG['paths']['continue_from_checkpoint']+"/model_round_*")]
+    latest_round_file = max(list_of_files, key=os.path.getctime)
+    print("Loading pre-trained model from: ", latest_round_file)
+    state_dict = torch.load(latest_round_file)
+    net.load_state_dict(state_dict, strict=True)
+#\\ ====== Load previous Checkpoint (Under Development) ====== #\\
+
+
 ### ====== Center Dropout (Under Development) ====== ###
 # class CDCriterion(fl.server.criterion.Criterion):
 #     def __init__(self, criterion, dropout_prob):
@@ -223,18 +233,50 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
         return super().aggregate_evaluate(rnd, results, failures)
 #\\ ====== Strategy for Checkpointing and Metrics ====== #\\
 
-### ====== Load previous Checkpoint (Under Development) ====== ###
-def load_parameters_from_disk():
-    # import Net
-    list_of_files = [fname for fname in glob.glob(CONFIG['paths']['continue_from_checkpoint'])]
-    latest_round_file = max(list_of_files, key=os.path.getctime)
-    parameters = np.load(latest_round_file)
-    params_dict = zip(net.state_dict().keys(), parameters)
-    state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
-    net.load_state_dict(state_dict, strict=True)
-#\\ ====== Load previous Checkpoint (Under Development) ====== #\\
+### ====== Configure file to set parameters for federated rounds ====== ###
+def fit_config(rnd: int):
+    """Return training configuration dict for each round.
+    """
+    if CONFIG['hyperparameters']['epochs_strategy'] == 'dynamic_epochs':
+        if rnd < int(CONFIG['hyperparameters']['federated_rounds'])/3:
+            local_epochs = 1
+        elif rnd < int(CONFIG['hyperparameters']['federated_rounds'])*2/3:
+            local_epochs = 2
+        else:
+            local_epochs = 3
+        config = {
+            # "batch_size": 32,
+            "local_epochs": local_epochs if rnd < int(CONFIG['hyperparameters']['federated_rounds']) \
+                else int(CONFIG['hyperparameters']['epochs_last_round']),
+            "round_number": rnd
+        }
+    else: #Tuning on last round
+        config = {
+            # "batch_size": 32,
+            "local_epochs": int(CONFIG['hyperparameters']['epochs_per_round']) if rnd < int(CONFIG['hyperparameters']['federated_rounds']) \
+                else int(CONFIG['hyperparameters']['epochs_last_round']),
+            "round_number": rnd
+        }
+
+    return config
+#\\ ====== Configure file to set parameters for federated rounds ====== #\\
 
 ### ====== Define strategy and initiate server ====== ###
+
+# if CONFIG['paths']['continue_from_checkpoint']:
+#     strategy = SaveModelAndMetricsStrategy(
+#         # (same arguments as FedAvg here)
+#         min_available_clients = args.center_number,
+#         min_fit_clients = args.center_number,
+#         min_eval_clients = args.center_number,
+#         # min_available_clients = CONFIG['strategy']['min_available_clients'],
+#         # min_fit_clients = CONFIG['strategy']['min_fit_clients'],
+#         # min_eval_clients = CONFIG['strategy']['min_eval_clients'],
+#         fraction_fit = CONFIG['strategy']['CD_P'],
+#         on_fit_config_fn = fit_config,
+#         initial_parameters=load_parameters_from_disk() # if CONFIG['paths']['continue_from_checkpoint'] else None
+#     )
+# else:
 strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
     min_available_clients = args.center_number,
@@ -244,7 +286,8 @@ strategy = SaveModelAndMetricsStrategy(
     # min_fit_clients = CONFIG['strategy']['min_fit_clients'],
     # min_eval_clients = CONFIG['strategy']['min_eval_clients'],
     fraction_fit = CONFIG['strategy']['CD_P'],
-    # initial_parameters=load_parameters_from_disk() if CONFIG['paths']['continue_from_checkpoint'] else None
+    on_fit_config_fn = fit_config
 )
+
 fl.server.start_server(strategy=strategy, server_address=f"[::]:{CONFIG['port']}", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})
 #\\ ====== Define strategy and initiate server ====== #\\
