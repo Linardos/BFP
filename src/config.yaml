@@ -3,7 +3,7 @@ device: 'cuda'
 name: 'TRIAL' # use 4digit name tag to overwrite experiment with same parameters
 docker: True
 simulation: False
-port: 33497
+port: 8080
 # Ports to use: 8080, 24144, 48487, 45513, 69016, 997857509
 # test_unseen: False # this will turn off train mode and test on a specified center
 strategy:
