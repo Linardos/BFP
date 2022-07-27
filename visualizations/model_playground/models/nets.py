@@ -117,53 +117,6 @@ class EfficientNetB0Classifier(nn.Sequential):
         super(EfficientNetB0Classifier, self).__init__(self.model, 
                                                  self.out)
 
-class MobileNetClassifier(nn.Sequential):
-    def __init__(self, pretrained, in_ch, out_ch=1, seed=None, early_layers_learning_rate=0):
-        '''
-        in_ch = 1 or 3
-        early_layers can be 'freeze' or 'lower_lr'
-        '''
-        super(MobileNetClassifier, self).__init__()
-        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
-        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'mobilenet_v2', pretrained=pretrained)
-        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
-        self.model.classifier[1] = nn.Linear(1280, out_ch)
-
-        if isinstance(self.model.classifier[1], nn.Linear):
-            torch.nn.init.xavier_uniform_(self.model.classifier[1].weight)
-            if self.model.classifier[1].bias is not None:
-                torch.nn.init.zeros_(self.model.classifier[1].bias)
-
-        if out_ch == 1:
-            self.out = nn.Sigmoid()
-        else:
-            self.out = nn.Softmax(dim=1)
-        super(MobileNetClassifier, self).__init__(self.model, 
-                                                 self.out)
-
-class EfficientNetB4Classifier(nn.Sequential):
-    def __init__(self, pretrained, in_ch, out_ch=1, seed=None, early_layers_learning_rate=0):
-        '''
-        in_ch = 1 or 3
-        early_layers can be 'freeze' or 'lower_lr'
-        '''
-        super(EfficientNetB4Classifier, self).__init__()
-        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
-        self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=pretrained)
-        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
-        self.model.classifier.fc = nn.Linear(1280, out_ch)
-
-        if isinstance(self.model.classifier.fc, nn.Linear):
-            torch.nn.init.xavier_uniform_(self.model.classifier.fc.weight)
-            if self.model.classifier.fc.bias is not None:
-                torch.nn.init.zeros_(self.model.classifier.fc.bias)
-
-        if out_ch == 1:
-            self.out = nn.Sigmoid()
-        else:
-            self.out = nn.Softmax(dim=1)
-        super(EfficientNetB4Classifier, self).__init__(self.model, 
-                                                 self.out)
 
 class DenseNet121Classifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):

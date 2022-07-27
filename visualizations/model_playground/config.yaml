@@ -1,20 +1,23 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
-name: '5centers_1epr30fr_BALANCED_AlexNetClassifier_Median_LateralityFixThenFlipAgain' # use 4digit name tag to overwrite experiment with same parameters
+name: 'CDS120' # use 4digit name tag to overwrite experiment with same parameters
 docker: False
+simulation: True
 port: 24144
-# Ports to use: 8080, 24144, 69016
+# Ports to use: 8080, 24144, 48487, 45513, 69016
 # test_unseen: False # this will turn off train mode and test on a specified center
 strategy:
     # min_available_clients: 2 # Change to increase the number of expected clients
     # min_fit_clients: 2
     # min_eval_clients: 2
     CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
-    aggregator: aggregator.FedMedian
+    aggregator: aggregator.FedAvg
     # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
-    federated_rounds: 30
-    epochs_per_round : 1 # 
+    federated_rounds: 1 # Number of federated rounds to run. This is the number of times the clients will send their data to the server.
+    epochs_per_round : 1
+    epochs_last_round: 120 # To test the fine-tuning.
+    epochs_strategy: False
     batch_size : 10  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
     lr : 0.01
@@ -26,7 +29,7 @@ hyperparameters:
 model:
     # The model name used here will generate a new experiment in the ~/mnm/experiments
     arch:
-        function: models.nets.AlexNetClassifier #ResNet18Classifier
+        function: models.nets.DenseNet121Classifier
         args: #keyword arguments for function
             pretrained: True
             in_ch: 1
@@ -40,6 +43,8 @@ data:
     labels: [0,1]
     load_max: -1 # -1 means load all
     balance: True
+    rotate: False
+    flip: True
 paths:
     # Used by client:
     # These are files we send the clients. So the path we define ourselves:
@@ -52,5 +57,5 @@ paths:
     # Used by server:
     # logs: BFP/src/server_logs
     experiments: BFP/src/experiments
-    misc: /experiment/misc
-    continue_from_checkpoint: False #/experiments/experiment_folder # If true change False with path to current experiment folder (Not path to checkpoint)
+    misc: experiment/misc
+    continue_from_checkpoint: False #experiments/0193_FAvg4EPR_ResNet50_LateralityFixThenFlipAgain #False #/experiments/experiment_folder # If true change False with path to current experiment folder (Not path to checkpoint)

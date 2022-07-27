@@ -114,7 +114,7 @@ if CONFIG['paths']['continue_from_checkpoint']:
     latest_round_file = max(list_of_files, key=os.path.getctime)
     print("Loading pre-trained model from: ", latest_round_file)
     state_dict = torch.load(latest_round_file)
-    net.load_state_dict(state_dict, strict=True)
+    net.load_state_dict(state_dict)
 #\\ ====== Load previous Checkpoint (Under Development) ====== #\\
 
 
@@ -195,6 +195,7 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
             params_dict = zip(net.state_dict().keys(), aggregated_weights)
             state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
             net.load_state_dict(state_dict, strict=True)
+            # Save the model
             torch.save(net.state_dict(), PATH_TO_EXPERIMENT / f"model_round_{rnd}.pth")
             
         return aggregated_parameters_tuple 

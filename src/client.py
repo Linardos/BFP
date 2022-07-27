@@ -140,8 +140,34 @@ def load_data():
     return training_loader, validation_loader #test_loader
 
 def train(net, training_loader, validation_loader, criterion, f_config):
+
     """Train the network on the training set."""
     local_epochs, round_number = f_config['local_epochs'], f_config['round_number']
+
+    if CONFIG['paths']['continue_from_checkpoint'] and round_number==1:
+        # Confirm validation metrics in case you loaded from checkpoint
+
+        current_epoch_num=list(log_dict['LMLD_val_loss'].keys())[-1]
+        next_epoch_num=current_epoch_num+1
+        log_dict['LMLD_val_loss'][next_epoch_num]=[] # A key for the next round is generated. Final round will always remain empty
+        correct, total, cumulative_loss = 0, 0, 0.0
+        false_positive, false_negative, true_positive, true_negative = 0, 0, 0, 0
+        total_labels, total_outputs = [], []
+        for i, batch in enumerate(tqdm(validation_loader)):
+            images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+            outputs = net(images)
+            loss = criterion(outputs, labels).item()
+            #
+            cumulative_loss += criterion(outputs, labels).item()
+            predicted = probabilities_to_labels(outputs.data)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+            total_labels += labels.cpu().detach().numpy().tolist()
+            total_outputs += outputs.cpu().detach().numpy().tolist()
+        AUC_score = roc_auc_score(total_labels, total_outputs)
+
+
     optimizer = torch.optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
     losses = []
     cumulative_loss = 0.0
@@ -220,10 +246,6 @@ def train(net, training_loader, validation_loader, criterion, f_config):
                 predicted = probabilities_to_labels(outputs.data)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
-                # false_positive += ((predicted == 1) & (labels == 0)).sum().item()
-                # false_negative += ((predicted == 0) & (labels == 1)).sum().item()
-                # true_positive += ((predicted == 1) & (labels == 1)).sum().item()
-                # true_negative += ((predicted == 0) & (labels == 0)).sum().item()
 
                 total_labels += labels.cpu().detach().numpy().tolist()
                 total_outputs += outputs.cpu().detach().numpy().tolist()
