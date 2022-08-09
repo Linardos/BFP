@@ -1,6 +1,6 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
-name: 'TRIAL_Smoothing_NoWeights' # use 4digit name tag to overwrite experiment with same parameters
+name: 'TRIAL_Averaging' # use 4digit name tag to overwrite experiment with same parameters
 docker: True
 simulation: False 
 port: 8080 
@@ -11,7 +11,7 @@ strategy:
     # min_fit_clients: 2
     # min_eval_clients: 2
     CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
-    aggregator: aggregator.FedSmooth
+    aggregator: aggregator.FedAvg #Smooth
     smoothing: 1 # None, or float in [0,1]
     # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
