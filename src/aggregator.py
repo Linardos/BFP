@@ -49,7 +49,6 @@ than or equal to the values of `min_fit_clients` and `min_eval_clients`.
 # Aggregate function
 
 from functools import reduce
-from typing import List, Tuple
 
 from pathlib import Path
 import numpy as np
@@ -93,11 +92,12 @@ def smooth_aggregate(results: List[Tuple[Weights, int]]) -> Weights:
     # if smoothing:
     if CONFIG['strategy']['smoothing']:
         examples_per_center = [num_examples for _, num_examples in results]
-        default_f_weights = [homogeneous_weights[i] * examples_per_center[i] / num_examples_total for i in range(num_centers)]
-        assert sum(default_f_weights) == 1, "Default weights do not sum to 1, sum: {}".format(sum(default_f_weights))
+        default_f_weights = [examples_per_center[i] / num_examples_total for i in range(num_centers)]
+        # assert round(sum(default_f_weights),3) == 1, "Default weights do not sum to 1, sum: {}".format(sum(default_f_weights))
         smoothing_value = CONFIG['strategy']['smoothing']
-        final_weights = [(d+h)*smoothing_value for d, h in zip(default_f_weights, homogeneous_weights)]
-        assert sum(final_weights) == 1, "Final weights after smoothing do not sum to 1, sum: {}".format(sum(final_weights))
+        # x*smoothing+y*(1-smoothing) where x is the default weight and y is a homogenous weight
+        final_weights = [(d*(1-smoothing_value)+h*smoothing_value) for d, h in zip(default_f_weights, homogeneous_weights)]
+        # assert round(sum(final_weights),3) == 1, "Final weights after smoothing do not sum to 1, sum: {}".format(sum(final_weights))
 
     else:
         final_weights = homogeneous_weights

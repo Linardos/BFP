@@ -181,6 +181,11 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
         with open(PATH_TO_EXPERIMENT / "log.pkl", 'wb') as handle:
             pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+        if CONFIG['model']['arch']['args']:
+            net = Model(**CONFIG['model']['arch']['args'])
+        else:
+            net = Model()
+
         """Aggregate model weights using weighted average and store checkpoint"""
         aggregated_parameters_tuple = super().aggregate_fit(rnd, results, failures)
         aggregated_parameters, _ = aggregated_parameters_tuple
