@@ -69,17 +69,17 @@ class ResNet50Classifier(nn.Sequential):
         super(ResNet50Classifier, self).__init__(self.model, 
                                                  self.out)
 
-class ResNet101Classifier(nn.Sequential):
+class ResNet34Classifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
         '''
         in_ch = 1 or 3
         early_layers can be 'freeze' or 'lower_lr'
         '''
-        super(ResNet101Classifier, self).__init__()
+        super(ResNet34Classifier, self).__init__()
         torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
-        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet101', pretrained=pretrained)
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'resnet34', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
-        self.model.fc = nn.Linear(2048, out_ch)
+        self.model.fc = nn.Linear(512, out_ch)
 
         if isinstance(self.model.fc, nn.Linear):
             torch.nn.init.xavier_uniform_(self.model.fc.weight)
@@ -90,7 +90,7 @@ class ResNet101Classifier(nn.Sequential):
             self.out = nn.Sigmoid()
         else:
             self.out = nn.Softmax(dim=1)
-        super(ResNet101Classifier, self).__init__(self.model, 
+        super(ResNet34Classifier, self).__init__(self.model, 
                                                  self.out)
 
 class EfficientNetB0Classifier(nn.Sequential):
@@ -151,7 +151,7 @@ class EfficientNetB4Classifier(nn.Sequential):
         torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_efficientnet_b4', pretrained=pretrained)
         # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
-        self.model.classifier.fc = nn.Linear(1280, out_ch)
+        self.model.classifier.fc = nn.Linear(1792, out_ch)
 
         if isinstance(self.model.classifier.fc, nn.Linear):
             torch.nn.init.xavier_uniform_(self.model.classifier.fc.weight)
@@ -188,7 +188,53 @@ class DenseNet121Classifier(nn.Sequential):
             self.out = nn.Softmax(dim=1)
         super(DenseNet121Classifier, self).__init__(self.model, 
                                                  self.out)
+class DenseNet161Classifier(nn.Sequential):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
+        '''
+        in_ch = 1 or 3
+        early_layers can be 'freeze' or 'lower_lr'
+        '''
+        super(DenseNet161Classifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'densenet161', pretrained=pretrained)
+        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.classifier = nn.Linear(2208, out_ch) # should adjust this
 
+        if isinstance(self.model.classifier, nn.Linear):
+            torch.nn.init.xavier_uniform_(self.model.classifier.weight)
+            if self.model.classifier.bias is not None:
+                torch.nn.init.zeros_(self.model.classifier.bias)
+
+        if out_ch == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
+        super(DenseNet161Classifier, self).__init__(self.model, 
+                                                 self.out)
+
+class VGG11Classifier(nn.Sequential):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
+        '''
+        in_ch = 1 or 3
+        early_layers can be 'freeze' or 'lower_lr'
+        '''
+        super(VGG11Classifier, self).__init__()
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
+        self.model = torch.hub.load('pytorch/vision:v0.10.0', 'vgg11', pretrained=pretrained)
+        # model.classifier[1]=nn.Conv2d(512, 1, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.classifier[6] = nn.Linear(4096, out_ch) # should adjust this
+
+        if isinstance(self.model.classifier[6], nn.Linear):
+            torch.nn.init.xavier_uniform_(self.model.classifier[6].weight)
+            if self.model.classifier[6].bias is not None:
+                torch.nn.init.zeros_(self.model.classifier[6].bias)
+
+        if out_ch == 1:
+            self.out = nn.Sigmoid()
+        else:
+            self.out = nn.Softmax(dim=1)
+        super(VGG11Classifier, self).__init__(self.model, 
+                                                 self.out)
 
 class AlexNetClassifier(nn.Sequential):
     def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
@@ -220,7 +266,7 @@ class AlexNetClassifier(nn.Sequential):
                                                  self.out)
 
 class SqueezeNetClassifier(nn.Sequential):
-    def __init__(self, pretrained, in_ch, out_ch, linear_ch, seed=None, early_layers_learning_rate=0):
+    def __init__(self, pretrained, in_ch, out_ch, seed=None, early_layers_learning_rate=0):
         '''
         in_ch = 1 or 3
         early_layers can be 'freeze' or 'lower_lr'
@@ -228,7 +274,7 @@ class SqueezeNetClassifier(nn.Sequential):
         super(SqueezeNetClassifier, self).__init__()
         torch.hub._validate_not_a_forked_repo=lambda a,b,c: True # no idea why it's needed, but it supposedly avoids the error "urllib.error.httperror http error 403 rate limit exceeded" in some centers
         self.model = torch.hub.load('pytorch/vision:v0.6.0', 'squeezenet1_0', pretrained=True)
-        self.model.classifier[1]=nn.Conv2d(linear_ch, out_ch, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
+        self.model.classifier[1]=nn.Conv2d(1000, out_ch, kernel_size=(1, 1), stride=(1, 1)) # Apply glorot initialization
         if isinstance(self.model.classifier[1], nn.Conv2d):
             torch.nn.init.xavier_uniform_(self.model.classifier[1].weight)
             if self.model.classifier[1].bias is not None:
