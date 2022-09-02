@@ -12,7 +12,7 @@ strategy:
     # min_eval_clients: 2
     CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
     aggregator: aggregator.FedAvg #Smooth
-    smoothing: 0.5 # None, or float in [0,1]
+    smoothing: 0 # None, or float in [0,1]
     # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
     federated_rounds: 120 # Number of federated rounds to run. This is the number of times the clients will send their data to the server.
