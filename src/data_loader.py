@@ -225,8 +225,12 @@ class ALLDataset(): # Should work for any center
             if CONFIG['data']['balance']:
                 # Balance the dataset
                 balance_to_min_index = min([len(images_benign), len(images_malignant)])
-                images_benign = images_benign[:balance_to_min_index]
-                images_malignant = images_malignant[:balance_to_min_index]
+                if not CONFIG['data']['max_per_label']:
+                    images_benign = images_benign[:balance_to_min_index]
+                    images_malignant = images_malignant[:balance_to_min_index]
+                else:
+                    images_benign = images_benign[:CONFIG['data']['max_per_label']]
+                    images_malignant = images_malignant[:CONFIG['data']['max_per_label']]
                 total_images = images_benign + images_malignant
                 for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
                     print(f'Total images selected by status ({status}): {len(ims)}')
@@ -382,3 +386,59 @@ class ALLDataset(): # Should work for any center
                 # Do your handling for a plain index
                 image = self.images[idx]
                 return preprocess_one_image_OPTIMAM(image)
+
+def test_center_data(dataset_path, csv_path, mode, load_max=1):
+    subjects = CMMDDataset(csv_path, dataset_path, load_max=load_max)
+    print("csv_path is", csv_path)
+    print("dataset_path is", dataset_path)
+    print("subjects length is", len(subjects))
+    def get_images_from_subjects(subjects_f):
+        images_benign, images_normal, images_malignant = [], [], []
+        for c in subjects_f:
+            for imlist, status in zip([images_normal, images_benign, images_malignant], ['Normal', 'Benign', 'Malignant']):
+                client_images_by_status = c.get_images_by_status(status=[status])
+                for image in client_images_by_status:
+                    imlist.append(image)
+        if CONFIG['data']['balance']:
+            # Balance the dataset
+            balance_to_min_index = min([len(images_benign), len(images_malignant)])
+            images_benign = images_benign[:balance_to_min_index]
+            images_malignant = images_malignant[:balance_to_min_index]
+            total_images = images_benign + images_malignant
+            for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
+                print(f'Total images selected by status ({status}): {len(ims)}')
+        else:
+            total_images = images_benign + images_malignant + images_normal
+            for ims, status in zip([images_benign, images_malignant], ['benign', 'malignant']):
+                print(f'Total images selected by status ({status}): {len(ims)}')
+        random.shuffle(total_images) 
+        # Data Split
+        training_images = total_images[:int(0.8*len(total_images))]
+        validation_images = total_images[int(0.8*len(total_images)):]
+        # test_images = total_images[int(0.8*len(total_images)):]
+
+        if mode == 'train':
+            images_to_use = training_images
+        elif mode == 'validation' or 'val':
+            images_to_use = validation_images
+        elif mode == 'test':
+            images_to_use = test_images
+        else:
+            raise ValueError(f'Mode: "{mode}" not recognized')
+
+        img_ids = [image.id for image in images_to_use]
+
+        return images_to_use, img_ids
+
+    images, image_ids = get_images_from_subjects(subjects)
+    print("images length is", len(images))
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d","--dataset_path", type=str, help="The full path to your dataset")
+    parser.add_argument("-c","--csv_path", type=str, help="The full path to your csv file")
+    args = parser.parse_args()
+    test_center_data(args.dataset_path, args.csv_path, mode='train')
+
+    

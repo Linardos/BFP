@@ -121,7 +121,7 @@ def smooth_aggregate(results: List[Tuple[Weights, int]]) -> Weights:
     ]
     return weights_prime
 
-def median_aggregate(results: List[Tuple[Weights, int]]) -> Weights:
+def median_aggregate(results: List[Tuple[Weights, int]], AUC) -> Weights:
     """Compute weighted average."""
     # Calculate the total number of examples used during training
     # num_examples_total = sum([num_examples for _, num_examples in results])
@@ -145,6 +145,29 @@ def median_aggregate(results: List[Tuple[Weights, int]]) -> Weights:
 
     return weights_prime
 
+def AUC_aggregate(results: List[Tuple[Weights, int]], AUC_weights) -> Weights:
+    """Compute weighted average."""
+    # Calculate the total number of examples used during training
+    # num_examples_total = sum([num_examples for _, num_examples in results])
+
+    # Create a list of weights, each multiplied by the related number of examples
+    all_weights = [
+        [layer for layer in weights] for weights, _ in results
+    ]
+
+    # Calculate the median of the weights
+    weights_prime: Weights = [
+        np.mean(np.stack(layer_updates), axis=0) 
+        for layer_updates in zip(*all_weights)
+    ]
+
+    # Compute median weights of each layer
+    # weights_prime: Weights = [
+    #     reduce(np.add, layer_updates) / num_examples_total
+    #     for layer_updates in zip(*weighted_weights)
+    # ]
+
+    return weights_prime
 
 # ====
 

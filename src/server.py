@@ -157,6 +157,24 @@ def import_class(name):
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 
+def test(net, validation_loader, criterion):
+    """Validate the network on the entire test set."""
+    print('Validating...')
+    with open(LOG_PATH / 'log.pkl', 'rb') as handle:
+        log_dict = pickle.load(handle)
+    total_labels, total_outputs = [], []
+    with torch.no_grad():
+        for i, batch in enumerate(tqdm(validation_loader)):
+            images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
+            outputs = net(images)
+            predicted = probabilities_to_labels(outputs.data)
+            total += labels.size(0)
+            total_labels += labels.cpu().detach().numpy().tolist()
+            total_outputs += outputs.cpu().detach().numpy().tolist()
+
+    AUC_score = roc_auc_score(total_labels, total_outputs)
+
+    return AUC_score
 
 ### ====== Strategy for Checkpointing and Metrics ====== ###
 class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])):
@@ -186,8 +204,36 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
         else:
             net = Model()
 
+        # ======= AUC aggregation =======
+        if CONFIG['strategy']['AUC_aggregation']:
+            AUC_weights = []
+            all_data_loader_types = []
+            # Choose random  node to act as central server:
+            selected_node_id = random.choice(list(self.server.clients))
+
+            for node_id, R in enumerate(results): 
+                
+                _, fit_res = R
+                weights_results = (parameters_to_weights(fit_res.parameters), fit_res.num_examples)
+                    # for _, fit_res in results
+                params_dict = zip(net.state_dict().keys(), weights_results)
+                state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+                net.load_state_dict(state_dict, strict=True)
+                # center_AUC = evaluate(net, test_loader, DEVICE)
+                validation_loader = DataLoader(ALLDataset(None, None, mode='val', data_loader_type=all_data_loader_types[node_id], load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+                center_AUC = test(net, validation_loader) #, criterion=CRITERION())
+                AUC_weights.append(center_AUC)
+            
+            aggregated_parameters_tuple = super().aggregate_fit(rnd, results, AUC_weights, failures)
+
+
+        # ======== AUC aggregation =========
+
+
         """Aggregate model weights using weighted average and store checkpoint"""
-        aggregated_parameters_tuple = super().aggregate_fit(rnd, results, failures)
+        if not CONFIG['strategy']['AUC_aggregation']: 
+            aggregated_parameters_tuple = super().aggregate_fit(rnd, results, failures)
+        
         aggregated_parameters, _ = aggregated_parameters_tuple
         # log_dict['aggregated_parameters']=aggregated_parameters
         
