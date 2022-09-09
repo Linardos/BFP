@@ -94,6 +94,8 @@ def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
     manufacturer = image.manufacturer # ['HOLOGIC, Inc.', 'Philips Digital Mammography Sweden AB', 'GE MEDICAL SYSTEMS', 'Philips Medical Systems', 'SIEMENS']
     # view = image.view # MLO_VIEW = ['MLO','LMLO','RMLO', 'LMO', 'ML'] CC_VIEW = ['CC','LCC','RCC', 'XCCL', 'XCCM']
     laterality = image.laterality # L R
+    if CONFIG['verbose']:
+        print("image.path is {}".format(image.path))
     if ".dcm" in image.path:
         # If this doesn't work. Check Lidia's https://gitlab.com/eucanimage/BreastCancer/-/blob/master/src/preprocessing/mmg_utils.py
         img_dcm = dicom.dcmread(image.path)
@@ -213,9 +215,10 @@ class ALLDataset(): # Should work for any center
             subjects = [subjects_jarv, subjects_stge, subjects_bcdr, subjects_inbreast, subjects_cmmd] # to balance each
             subjects_center = ['jarv', 'stge', 'bcdr', 'inbreast', 'cmmd']
             # subjects = subjects_stge + subjects_jarv + subjects_bcdr + subjects_inbreast + subjects_cmmd
-        print("csv_path is", csv_path)
-        print("dataset_path is", dataset_path)
-        print("subjects length is", len(subjects))
+        if CONFIG['verbose']:
+            print("csv_path is", csv_path)
+            print("dataset_path is", dataset_path)
+            print("subjects length is", len(subjects))
 
         # In the simulation we use the extracted IDs. Real world should use the other function still
         def get_images_from_subjects_simulation(subjects_f, image_id_list):
