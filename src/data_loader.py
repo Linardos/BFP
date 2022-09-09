@@ -213,6 +213,9 @@ class ALLDataset(): # Should work for any center
             subjects = [subjects_jarv, subjects_stge, subjects_bcdr, subjects_inbreast, subjects_cmmd] # to balance each
             subjects_center = ['jarv', 'stge', 'bcdr', 'inbreast', 'cmmd']
             # subjects = subjects_stge + subjects_jarv + subjects_bcdr + subjects_inbreast + subjects_cmmd
+        print("csv_path is", csv_path)
+        print("dataset_path is", dataset_path)
+        print("subjects length is", len(subjects))
 
         # In the simulation we use the extracted IDs. Real world should use the other function still
         def get_images_from_subjects_simulation(subjects_f, image_id_list):
@@ -431,7 +434,7 @@ def test_center_data(dataset_path, csv_path, mode, load_max=1):
         return images_to_use, img_ids
 
     images, image_ids = get_images_from_subjects(subjects)
-    print("images length is", len(images))
+    print(f"Number of images selected for mode {mode} is {len(images)}")
 
 if __name__ == '__main__':
     import argparse
