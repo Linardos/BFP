@@ -82,9 +82,9 @@ def crop_MG(arr): # remove zeroes side
     return arr[[slice(*s) for s in slices]]
 
 def preprocess_one_image_OPTIMAM(image): # Read as nifti without saving
-    if image.status=='Malignant' or image.status=='Malign':
+    if image.status=='Malignant' or image.status=='Malign' or image.status=='M':
         label = np.single(1)
-    elif image.status=='Benign': 
+    elif image.status=='Benign' or image.status=='B': 
         label = np.single(0)
     else: #Add normal eventually
         raise ValueError("Unknown status: {}".format(image.status))
@@ -268,7 +268,7 @@ class ALLDataset(): # Should work for any center
             images_benign, images_normal, images_malignant = [], [], []
             for c in subjects_f:
                 for imlist, status in zip([images_normal, images_benign, images_malignant], ['Normal', 'Benign', 'Malignant']):
-                    client_images_by_status = c.get_images_by_status(status=[status])
+                    client_images_by_status = c.get_images_by_status(status=[status, status[0]]) # In some centers status is defined by the first letter
                     for image in client_images_by_status:
                         imlist.append(image)
             if CONFIG['data']['balance']:

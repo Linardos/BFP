@@ -1,9 +1,9 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
-name: 'FAvg_ResNet50' # use 4digit name tag to overwrite experiment with same parameters
-docker: True
-simulation: False
-port: 8080
+name: 'FAvg_ResNet18_FromScratch' # use 4digit name tag to overwrite experiment with same parameters
+docker: False
+simulation: True
+port: 997857509
 # Ports to use: 8080, 24144, 48487, 45513, 997857509
 # test_unseen: False # this will turn off train mode and test on a specified center
 verbose: True
@@ -13,13 +13,13 @@ strategy:
     # min_eval_clients: 2
     CD_P: 1.0 # Center Dropout [Percentage]. 1 means no dropout. 
     aggregator: aggregator.FedAvg #Smooth
-    AUC_aggregation: False
-    smoothing: 1.0 # None, or float in [0,1]
+    AUC_aggregation: False 
+    smoothing: 0 # None, or float in [0,1]. 0 equals Federated Averaging.
     # Note that if CD_P results in a lower number of clients than min_fit_clients, algorithm will default to min_fit_clients. Make sure to adjust accordingly
 hyperparameters:
     federated_rounds: 120 # Number of federated rounds to run. This is the number of times the clients will send their data to the server.
     epochs_per_round : 1 
-    epochs_last_round: 10 # To test the fine-tuning.
+    epochs_last_round: 1 # To test the fine-tuning.
     epochs_strategy: False #"dynamic_epochs"
     batch_size : 10  # if 0, it will adapt to center
     test_batch_size : 10 #use a higher one for speed up if CUDA memory allows  
@@ -32,9 +32,9 @@ hyperparameters:
 model:
     # The model name used here will generate a new experiment in the ~/mnm/experiments
     arch:
-        function: models.nets.ResNet50Classifier
+        function: models.nets.ResNet18Classifier
         args: #keyword arguments for function
-            pretrained: True
+            pretrained: False
             in_ch: 1
             out_ch: 1
             early_layers_learning_rate: 1e-5 #10^-5, if set to 0 early layers will be frozen 
@@ -56,8 +56,8 @@ paths:
     landmarks: /BFP/src/preprocessing/optimam_train_hologic_landmarks.pth # in docker
     # ub_logs: workenv/BFP/src/visualizations # Ignore this
     # These are paths we should be given from the partners. The docker should mount them:
-    csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
-    dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
+    # csv_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/client_images_screening.csv
+    # dataset_path: /home/lidia-garrucho/datasets/OPTIMAM/png_screening_cropped_fixed/images
     # Used by server:
     # logs: BFP/src/server_logs
     experiments: BFP/src/experiments

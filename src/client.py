@@ -295,6 +295,8 @@ def test(net, validation_loader, criterion):
     next_round_num=current_round_num+1
     log_dict['GMLD_val_loss'][next_round_num]=[] # A key for the next round is generated. Final round will always remain empty
     total_labels, total_outputs = [], []
+
+    net.eval()
     with torch.no_grad():
         for i, batch in enumerate(tqdm(validation_loader)):
             if DATA_LOADER_TYPE == 'all':
@@ -371,7 +373,8 @@ class ClassificationClient(fl.client.NumPyClient):
         self.set_parameters(parameters)
         results = train(self.net, self.train_loader, self.validation_loader, criterion=CRITERION(), f_config=config) # validation loader for sanity check only
         results = {
-            'cumulative_loss': float(results)
+            'cumulative_loss': float(results),
+            'center_name': DATA_LOADER_TYPE
         }
         return self.get_parameters(), len(self.train_loader), results
 

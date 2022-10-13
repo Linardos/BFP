@@ -8,15 +8,20 @@ import glob
 
 import flwr as fl
 import numpy as np
+import random
 import torch
 import pickle
 import yaml
 import importlib
 import argparse
 from pathlib import Path
+from tqdm import tqdm
 
 from models import nets
 import aggregator
+from torch.utils.data import DataLoader
+from data_loader import ALLDataset
+from sklearn.metrics import roc_auc_score
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-c","--center_number", type=int, help="Center Number", default=5)
@@ -91,7 +96,8 @@ shutil.copy('data_loader.py', PATH_TO_EXPERIMENT)
 ### ====== Log ====== ###
 log_dict = {'accuracies_aggregated': [],
             'total_val_loss': [],
-            'time_spent': []}
+            'time_spent': [],
+            'AUC_scores': {'jarv': [], 'stge': [], 'bcdr':[], 'cmmd':[], 'inbreast':[]}}
 with open(PATH_TO_EXPERIMENT / 'log.pkl', 'wb') as handle:
     pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
 #\\ ====== Log ====== #\\
@@ -110,11 +116,17 @@ else:
 # def load_parameters_from_disk():
 if CONFIG['paths']['continue_from_checkpoint']:
     # import Net
-    list_of_files = [fname for fname in glob.glob(CONFIG['paths']['continue_from_checkpoint']+"/model_round_*")]
-    latest_round_file = max(list_of_files, key=os.path.getctime)
-    print("Loading pre-trained model from: ", latest_round_file)
-    state_dict = torch.load(latest_round_file)
-    net.load_state_dict(state_dict)
+    def load_parameters_from_disk():
+        list_of_files = [fname for fname in glob.glob(CONFIG['paths']['continue_from_checkpoint']+"/model_round_*")]
+        latest_round_file = max(list_of_files, key=os.path.getctime)
+        print("Loading pre-trained model from: ", latest_round_file)
+        state_dict = torch.load(latest_round_file)
+        net.load_state_dict(state_dict)
+        weights = [val.cpu().numpy() for _, val in net.state_dict().items()]
+        return fl.common.ndarrays_to_parameters(weights)
+else:
+    def load_parameters_from_disk():
+        return None
 #\\ ====== Load previous Checkpoint (Under Development) ====== #\\
 
 
@@ -151,24 +163,14 @@ if CONFIG['paths']['continue_from_checkpoint']:
 #         return [self.clients[cid] for cid in sampled_cids]
 #\\ ====== Center Dropout (Under Development) ====== #\\
 
-
-def import_class(name):
-    module_name, class_name = name.rsplit('.', 1)
-    module = importlib.import_module(module_name)
-    return getattr(module, class_name)
-
-def test(net, validation_loader, criterion):
+def test(net, validation_loader):
     """Validate the network on the entire test set."""
     print('Validating...')
-    with open(LOG_PATH / 'log.pkl', 'rb') as handle:
-        log_dict = pickle.load(handle)
     total_labels, total_outputs = [], []
     with torch.no_grad():
         for i, batch in enumerate(tqdm(validation_loader)):
             images, labels = batch[0].to(DEVICE), batch[1].to(DEVICE).unsqueeze(1)
             outputs = net(images)
-            predicted = probabilities_to_labels(outputs.data)
-            total += labels.size(0)
             total_labels += labels.cpu().detach().numpy().tolist()
             total_outputs += outputs.cpu().detach().numpy().tolist()
 
@@ -196,9 +198,6 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
         log_dict['total_val_loss'].append(losses)
         log_dict['time_spent'].append(time.time() - INITIAL_TIME)
         
-        with open(PATH_TO_EXPERIMENT / "log.pkl", 'wb') as handle:
-            pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
         if CONFIG['model']['arch']['args']:
             net = Model(**CONFIG['model']['arch']['args'])
         else:
@@ -206,27 +205,49 @@ class SaveModelAndMetricsStrategy(import_class(CONFIG['strategy']['aggregator'])
 
         # ======= AUC aggregation =======
         if CONFIG['strategy']['AUC_aggregation']:
-            AUC_weights = []
+            AUC_weights, c_names = [], []
             all_data_loader_types = []
             # Choose random  node to act as central server:
-            selected_node_id = random.choice(list(self.server.clients))
+            center_names = [r.metrics["center_name"] for _, r in results]
+            center_name = random.choice(center_names)
 
-            for node_id, R in enumerate(results): 
+            for R in results: 
                 
                 _, fit_res = R
-                weights_results = (parameters_to_weights(fit_res.parameters), fit_res.num_examples)
+                if CONFIG['strategy']['AUC_aggregation'] == 'local':
+                    # Each model is evaluated on its own center
+                    print("AUC aggregation is local")
+                    center_name = fit_res.metrics["center_name"]
+                else:
+                    # Skip the center's model if its the chosen center
+                    print("AUC aggregation happens in a dynamic central node")
+                    if fit_res.metrics["center_name"] == center_name:
+                        log_dict['AUC_scores'][center_name].append(np.nan) #https://matplotlib.org/stable/gallery/lines_bars_and_markers/masked_demo.html
+                        continue
+                weights_results = fl.common.parameters_to_weights(fit_res.parameters)
                     # for _, fit_res in results
                 params_dict = zip(net.state_dict().keys(), weights_results)
                 state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
                 net.load_state_dict(state_dict, strict=True)
                 # center_AUC = evaluate(net, test_loader, DEVICE)
-                validation_loader = DataLoader(ALLDataset(None, None, mode='val', data_loader_type=all_data_loader_types[node_id], load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
+                net.to(DEVICE)
+                validation_loader = DataLoader(ALLDataset(None, None, mode='val', data_loader_type=center_name, load_max=CONFIG['data']['load_max']), batch_size=CONFIG['hyperparameters']['batch_size'])
                 center_AUC = test(net, validation_loader) #, criterion=CRITERION())
                 AUC_weights.append(center_AUC)
-            
-            aggregated_parameters_tuple = super().aggregate_fit(rnd, results, AUC_weights, failures)
+                c_names.append(center_name)
+                log_dict['AUC_scores'][center_name].append(center_AUC)
+
+            # log_dict['AUC_scores'].append(AUC_weights)
+            # Normalize weights
+            norm_AUC_weights = [float(i)/sum(AUC_weights) for i in AUC_weights]
+            print("Sum of AUC weights is: ", sum(norm_AUC_weights))
+            AUC_weights_dict = {c_names[i]: norm_AUC_weights[i] for i in range(len(c_names))}
+
+            aggregated_parameters_tuple = super().aggregate_fit(rnd=rnd, results=results, AUC_weights=AUC_weights_dict, failures=failures)
 
 
+        with open(PATH_TO_EXPERIMENT / "log.pkl", 'wb') as handle:
+            pickle.dump(log_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
         # ======== AUC aggregation =========
 
 
@@ -316,19 +337,6 @@ def fit_config(rnd: int):
 ### ====== Define strategy and initiate server ====== ###
 
 # if CONFIG['paths']['continue_from_checkpoint']:
-#     strategy = SaveModelAndMetricsStrategy(
-#         # (same arguments as FedAvg here)
-#         min_available_clients = args.center_number,
-#         min_fit_clients = args.center_number,
-#         min_eval_clients = args.center_number,
-#         # min_available_clients = CONFIG['strategy']['min_available_clients'],
-#         # min_fit_clients = CONFIG['strategy']['min_fit_clients'],
-#         # min_eval_clients = CONFIG['strategy']['min_eval_clients'],
-#         fraction_fit = CONFIG['strategy']['CD_P'],
-#         on_fit_config_fn = fit_config,
-#         initial_parameters=load_parameters_from_disk() # if CONFIG['paths']['continue_from_checkpoint'] else None
-#     )
-# else:
 strategy = SaveModelAndMetricsStrategy(
     # (same arguments as FedAvg here)
     min_available_clients = args.center_number,
@@ -338,7 +346,8 @@ strategy = SaveModelAndMetricsStrategy(
     # min_fit_clients = CONFIG['strategy']['min_fit_clients'],
     # min_eval_clients = CONFIG['strategy']['min_eval_clients'],
     fraction_fit = CONFIG['strategy']['CD_P'],
-    on_fit_config_fn = fit_config
+    on_fit_config_fn = fit_config,
+    initial_parameters=load_parameters_from_disk() # None if continue is false.
 )
 
 fl.server.start_server(strategy=strategy, server_address=f"[::]:{CONFIG['port']}", config={"num_rounds": CONFIG['hyperparameters']['federated_rounds']})
