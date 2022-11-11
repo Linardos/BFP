@@ -1,9 +1,9 @@
 seed: [0] #[1,2,3,4]
 device: 'cuda'
 name: 'FAvg_ResNet18_FromScratch' # use 4digit name tag to overwrite experiment with same parameters
-docker: False
-simulation: True
-port: 997857509
+docker: True
+simulation: False
+port: 8080
 # Ports to use: 8080, 24144, 48487, 45513, 997857509
 # test_unseen: False # this will turn off train mode and test on a specified center
 verbose: True
